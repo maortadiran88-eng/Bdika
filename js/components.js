@@ -1,11 +1,58 @@
 // ══════════ LOGIN ══════════
 function LoginScreen({data,onLogin}){
   const[pwd,setPwd]=useState('');const[err,setErr]=useState('');
+  const[locked,setLocked]=useState(false);
+  const[lockTimer,setLockTimer]=useState(0);
+  const[attempts,setAttempts]=useState(()=>{
+    try{const s=JSON.parse(sessionStorage.getItem('ac_attempts')||'{"count":0,"until":0}');
+      if(s.until>Date.now())return s;
+      return{count:0,until:0};
+    }catch{return{count:0,until:0};}
+  });
+
+  // Check lockout on mount
+  useEffect(()=>{
+    if(attempts.until>Date.now()){
+      setLocked(true);
+      const remaining=Math.ceil((attempts.until-Date.now())/1000);
+      setLockTimer(remaining);
+      const t=setInterval(()=>{
+        const left=Math.ceil((attempts.until-Date.now())/1000);
+        if(left<=0){setLocked(false);setLockTimer(0);setAttempts({count:0,until:0});sessionStorage.removeItem('ac_attempts');clearInterval(t);}
+        else setLockTimer(left);
+      },1000);
+      return()=>clearInterval(t);
+    }
+  },[]);
+
   const submit=()=>{
+    if(locked)return;
     const users=data.users||DEFAULT_USERS;
     const match=users.find(u=>u.pass===pwd);
-    if(match){onLogin(match.role,match.id,match.label);}
-    else setErr('סיסמה שגויה');
+    if(match){
+      sessionStorage.removeItem('ac_attempts');
+      onLogin(match.role,match.id,match.label);
+    } else {
+      const newCount=attempts.count+1;
+      if(newCount>=5){
+        const until=Date.now()+5*60*1000; // 5 minute lockout
+        const newState={count:newCount,until};
+        setAttempts(newState);
+        try{sessionStorage.setItem('ac_attempts',JSON.stringify(newState));}catch{}
+        setLocked(true);setLockTimer(300);
+        setErr('יותר מדי ניסיונות שגויים — האתר נעול ל-5 דקות');
+        const t=setInterval(()=>{
+          const left=Math.ceil((until-Date.now())/1000);
+          if(left<=0){setLocked(false);setLockTimer(0);setAttempts({count:0,until:0});sessionStorage.removeItem('ac_attempts');clearInterval(t);}
+          else setLockTimer(left);
+        },1000);
+      } else {
+        const newState={count:newCount,until:0};
+        setAttempts(newState);
+        try{sessionStorage.setItem('ac_attempts',JSON.stringify(newState));}catch{}
+        setErr(`סיסמה שגויה (${5-newCount} ניסיונות נותרו)`);
+      }
+    }
   };
   return(
     <div style={{minHeight:'100vh',background:'linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%)',display:'flex',alignItems:'center',justifyContent:'center',padding:20,direction:'rtl'}}>
@@ -16,8 +63,12 @@ function LoginScreen({data,onLogin}){
         <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="הזן סיסמת כניסה" autoFocus
           style={{width:'100%',padding:'13px 16px',borderRadius:10,border:`2px solid ${err?'#e53935':'#e5e7eb'}`,fontSize:15,textAlign:'center',marginBottom:10,outline:'none',boxSizing:'border-box'}}/>
         {err&&<div style={{color:'#e53935',fontSize:13,marginBottom:10,fontWeight:'bold'}}>{err}</div>}
-        <button onClick={submit} style={{width:'100%',padding:'13px',background:'linear-gradient(135deg,#1565c0,#1976d2)',color:'#fff',border:'none',borderRadius:10,fontSize:16,fontWeight:'bold',cursor:'pointer',marginBottom:22}}>
-          כניסה למערכת ←
+        {locked&&<div style={{background:'#ffebee',borderRadius:10,padding:'10px 14px',marginBottom:10,fontSize:13,color:'#c62828',fontWeight:'bold',textAlign:'center'}}>
+          🔒 האתר נעול · {Math.floor(lockTimer/60)}:{String(lockTimer%60).padStart(2,'0')} נותרו
+        </div>}
+        <button onClick={submit} disabled={locked}
+          style={{width:'100%',padding:'13px',background:locked?'#bdbdbd':'linear-gradient(135deg,#1565c0,#1976d2)',color:'#fff',border:'none',borderRadius:10,fontSize:16,fontWeight:'bold',cursor:locked?'not-allowed':'pointer',marginBottom:22,transition:'background .3s'}}>
+          {locked?'🔒 נעול זמנית':'כניסה למערכת ←'}
         </button>
         <div style={{background:'#fff8e1',borderRadius:10,padding:'12px 14px',fontSize:12,color:'#795548',textAlign:'right',lineHeight:1.7,border:'1px solid #ffe082'}}>
           ⚠️ {data.disclaimer||'מערכת זו מיועדת לשימוש עובדי תדיראן בלבד.'}
@@ -225,8 +276,126 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
   );
 }
 
+// ══════════ ADD SUBCAT BUTTON ══════════
+function AddSubcatButton({brand, onAdd}){
+  const[adding,setAdding]=useState(false);
+  const[name,setName]=useState('');
+  const ref=useRef();
+  if(!adding)return(
+    <div onClick={()=>{setAdding(true);setTimeout(()=>ref.current?.focus(),50);}}
+      style={{padding:'5px 14px 5px 30px',fontSize:11,color:brand.color,cursor:'pointer',borderBottom:'1px dashed var(--border)',display:'flex',alignItems:'center',gap:4,opacity:.7}}
+      onMouseEnter={e=>e.currentTarget.style.opacity=1} onMouseLeave={e=>e.currentTarget.style.opacity=.7}>
+      ＋ הוסף תת-קטגוריה
+    </div>
+  );
+  return(
+    <div style={{padding:'4px 8px',background:'var(--row2)',borderBottom:'1px solid var(--border)',display:'flex',gap:4}}>
+      <input ref={ref} value={name} onChange={e=>setName(e.target.value)} placeholder="שם תת-קטגוריה..."
+        onKeyDown={e=>{if(e.key==='Enter'&&name.trim()){onAdd(name.trim());setName('');setAdding(false);}if(e.key==='Escape'){setAdding(false);setName('');}}}
+        style={{flex:1,border:'1px solid var(--border)',borderRadius:4,padding:'4px 7px',fontSize:11,color:'var(--inp)',background:'var(--ibg)'}}/>
+      <button onClick={()=>{if(name.trim()){onAdd(name.trim());setName('');setAdding(false);}}} style={{background:brand.color,color:'#fff',border:'none',borderRadius:4,padding:'4px 8px',cursor:'pointer',fontSize:11}}>✓</button>
+      <button onClick={()=>{setAdding(false);setName('');}} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'4px 6px',cursor:'pointer',fontSize:11,color:'var(--text)'}}>✕</button>
+    </div>
+  );
+}
+
+// ══════════ SUBCATEGORY LEVEL ══════════
+function SubcatLevel({brand,cat,subcat,sel,admin,editor,favorites,onToggleFav,onNav,onRename,onDelete,onAddModel,onDelModel}){
+  const[open,setOpen]=useState(sel?.scid===subcat.id);
+  const[editing,setEditing]=useState(false);
+  const[editName,setEditName]=useState(subcat.name);
+  const[addingMod,setAddingMod]=useState(false);
+  const[newModName,setNewModName]=useState('');
+  const modRef=useRef();
+
+  useEffect(()=>{if(sel?.scid===subcat.id)setOpen(true);},[sel?.scid]);
+
+  const allNames=subcat.models.map(m=>m.name);
+  const isDup=newModName.trim()&&allNames.some(n=>n.toLowerCase()===newModName.trim().toLowerCase());
+  const suggestions=newModName.trim().length>=1?allNames.filter(n=>n.toLowerCase().includes(newModName.toLowerCase())&&n.toLowerCase()!==newModName.toLowerCase()):[];
+
+  const doAdd=()=>{if(!newModName.trim()||isDup)return;onAddModel(newModName.trim());setNewModName('');setAddingMod(false);};
+
+  return(
+    <div style={{borderBottom:'1px solid var(--border)'}}>
+      {/* Sub-category header */}
+      <div style={{display:'flex',alignItems:'center',background:brand.color+'12',minHeight:32}}>
+        {editing&&admin
+          ?<div style={{flex:1,display:'flex',gap:4,padding:'3px 8px'}}>
+             <input value={editName} autoFocus onChange={e=>setEditName(e.target.value)}
+               onKeyDown={e=>{if(e.key==='Enter'){onRename(editName);setEditing(false);}if(e.key==='Escape')setEditing(false);}}
+               style={{flex:1,border:`1px solid ${brand.color}`,borderRadius:4,padding:'3px 6px',fontSize:11,color:'var(--inp)',background:'var(--ibg)'}}/>
+             <button onClick={()=>{onRename(editName);setEditing(false);}} style={{background:brand.color,color:'#fff',border:'none',borderRadius:4,padding:'2px 7px',cursor:'pointer',fontSize:10}}>✓</button>
+             <button onClick={()=>setEditing(false)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'2px 5px',cursor:'pointer',fontSize:10,color:'var(--text)'}}>✕</button>
+           </div>
+          :<div onClick={()=>setOpen(v=>!v)} style={{flex:1,padding:'6px 12px 6px 28px',cursor:'pointer',fontSize:12,fontWeight:'600',color:brand.color,userSelect:'none',display:'flex',alignItems:'center',gap:4}}>
+             <span style={{fontSize:10}}>{open?'▼':'▶'}</span>
+             <span>📂 {subcat.name}</span>
+             <span style={{fontSize:10,color:'var(--sub)',fontWeight:'normal',marginRight:'auto'}}>{subcat.models.length} דגמים</span>
+           </div>
+        }
+        {admin&&!editing&&(
+          <div style={{display:'flex',flexShrink:0,paddingLeft:4,gap:1}}>
+            <button onClick={e=>{e.stopPropagation();setAddingMod(true);setTimeout(()=>modRef.current?.focus(),50);}}
+              style={{background:'none',border:'none',color:brand.color,cursor:'pointer',fontSize:16,fontWeight:'bold',padding:'2px 5px',lineHeight:1}}>+</button>
+            <button onClick={e=>{e.stopPropagation();setEditing(true);setEditName(subcat.name);}}
+              style={{background:'none',border:'none',color:'var(--sub)',cursor:'pointer',fontSize:12,padding:'2px 3px'}}>✏</button>
+            <button onClick={e=>{e.stopPropagation();onDelete();}}
+              style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:12,padding:'2px 4px'}}>🗑</button>
+          </div>
+        )}
+        {editor&&!admin&&!editing&&(
+          <button onClick={e=>{e.stopPropagation();setAddingMod(true);setTimeout(()=>modRef.current?.focus(),50);}}
+            style={{background:'none',border:'none',color:brand.color,cursor:'pointer',fontSize:16,fontWeight:'bold',padding:'2px 8px',lineHeight:1}}>+</button>
+        )}
+      </div>
+
+      {/* Add model input */}
+      {addingMod&&(
+        <div style={{padding:'5px 8px',background:'var(--row2)',display:'flex',flexDirection:'column',gap:3,borderBottom:'1px solid var(--border)'}}>
+          <div style={{display:'flex',gap:5}}>
+            <input ref={modRef} value={newModName} onChange={e=>setNewModName(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter'&&!isDup)doAdd();if(e.key==='Escape'){setAddingMod(false);setNewModName('');}}}
+              placeholder="שם הדגם..."
+              style={{flex:1,border:`1px solid ${isDup?'#e53935':'var(--border)'}`,borderRadius:4,padding:'4px 7px',fontSize:11,color:'var(--inp)',background:'var(--ibg)'}}/>
+            <button onClick={doAdd} disabled={isDup||!newModName.trim()} style={{background:isDup?'#aaa':brand.color,color:'#fff',border:'none',borderRadius:4,padding:'4px 9px',cursor:isDup?'not-allowed':'pointer',fontSize:11}}>הוסף</button>
+            <button onClick={()=>{setAddingMod(false);setNewModName('');}} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'4px 6px',cursor:'pointer',fontSize:11,color:'var(--text)'}}>✕</button>
+          </div>
+          {isDup&&<div style={{fontSize:10,color:'#e53935',fontWeight:'bold'}}>⚠️ דגם בשם זה כבר קיים!</div>}
+          {suggestions.length>0&&!isDup&&(
+            <div style={{background:'#fff',border:'1px solid var(--border)',borderRadius:5,overflow:'hidden',maxHeight:100,overflowY:'auto'}}>
+              {suggestions.slice(0,4).map(s=>(
+                <div key={s} onClick={()=>setNewModName(s)} style={{padding:'4px 9px',cursor:'pointer',fontSize:11,color:'var(--text)',borderBottom:'1px solid var(--border)'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--row2)'} onMouseLeave={e=>e.currentTarget.style.background=''}>🔍 {s}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Models inside sub-category */}
+      {open&&subcat.models.map(m=>(
+        <div key={m.id} style={{display:'flex',alignItems:'center',borderBottom:'1px solid var(--border)',paddingRight:12}}>
+          <div onClick={()=>onNav(brand.id,cat.id,m.id,'',subcat.id)}
+            style={{flex:1,padding:'7px 8px 7px 30px',cursor:'pointer',fontSize:12,
+              color:sel?.mid===m.id&&sel?.scid===subcat.id?brand.color:'var(--text)',
+              fontWeight:sel?.mid===m.id&&sel?.scid===subcat.id?'bold':'normal',
+              background:sel?.mid===m.id&&sel?.scid===subcat.id?brand.color+'15':'transparent',
+              borderRight:sel?.mid===m.id&&sel?.scid===subcat.id?`3px solid ${brand.color}`:'3px solid transparent'}}>
+            {m.name}
+            {m.synonyms?.length>0&&<div style={{fontSize:9,color:'var(--sub)',marginTop:1}}>{m.synonyms.join(' | ')}</div>}
+          </div>
+          <button onClick={()=>onToggleFav(m.id)} style={{background:'none',border:'none',fontSize:12,cursor:'pointer',padding:'0 3px'}}>{favorites.has(m.id)?'⭐':'☆'}</button>
+          {admin&&<button onClick={()=>onDelModel(m.id)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:12,padding:'0 6px'}}>🗑</button>}
+        </div>
+      ))}
+      {open&&!subcat.models.length&&<div style={{padding:'6px 28px',color:'var(--sub)',fontSize:11}}>אין דגמים</div>}
+    </div>
+  );
+}
+
 // ══════════ SIDEBAR BRAND ══════════
-function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddModel,onDelModel,onAddCat,onEditCat,onDelCat,sidebarFilter}){
+function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddModel,onDelModel,onAddCat,onEditCat,onDelCat,sidebarFilter,onAddSubcat,onRenameSubcat,onDeleteSubcat,onAddModelToSubcat,onDelModelFromSubcat}){
   const[open,setOpen]=useState(false);const[openCats,setOpenCats]=useState({});
   const[addingMod,setAddingMod]=useState(null);const[newModName,setNewModName]=useState('');
   const[editCat,setEditCat]=useState(null);const[addingCat,setAddingCat]=useState(false);const[newCatName,setNewCatName]=useState('');
@@ -235,10 +404,14 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
   useEffect(()=>{if(sel?.bid===brand.id){setOpen(true);setOpenCats(p=>({...p,[sel.cid]:true}));}},[sel?.bid,sel?.cid]);
   useEffect(()=>{
     if(!sidebarFilter)return;
-    const q=sidebarFilter.toLowerCase();
-    const modelMatches=m=>m.name.toLowerCase().includes(q)||(m.synonyms||[]).some(s=>s.toLowerCase().includes(q));
-    const hasMatch=brand.categories.some(c=>c.models.some(modelMatches));
-    if(hasMatch){setOpen(true);brand.categories.forEach(c=>{if(c.models.some(modelMatches))setOpenCats(p=>({...p,[c.id]:true}));});}
+    const isUnapprovedFilter=sidebarFilter==='__unapproved__';
+    const q=isUnapprovedFilter?'':sidebarFilter.toLowerCase();
+    const modelMatches=m=>{
+      if(isUnapprovedFilter)return m.parts.length>0&&m.parts.some(p=>!p.approved);
+      return m.name.toLowerCase().includes(q)||(m.synonyms||[]).some(s=>s.toLowerCase().includes(q));
+    };
+    const hasMatch=brand.categories.some(c=>c.models.some(modelMatches)||(c.subcategories||[]).some(s=>s.models.some(modelMatches)));
+    if(hasMatch){setOpen(true);brand.categories.forEach(c=>{if(c.models.some(modelMatches)||(c.subcategories||[]).some(s=>s.models.some(modelMatches)))setOpenCats(p=>({...p,[c.id]:true}));});}
   },[sidebarFilter]);
 
   const toggleCat=id=>setOpenCats(p=>({...p,[id]:!p[id]}));
@@ -256,10 +429,15 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
       </div>
       {open&&<>
         {brand.categories.map(c=>{
-          const q=sidebarFilter?sidebarFilter.toLowerCase():'';
-          const modelMatches=m=>!q||m.name.toLowerCase().includes(q)||(m.synonyms||[]).some(s=>s.toLowerCase().includes(q));
+          const isUF=sidebarFilter==='__unapproved__';
+          const q=(!isUF&&sidebarFilter)?sidebarFilter.toLowerCase():'';
+          const modelMatches=m=>{
+            if(isUF)return m.parts.length>0&&m.parts.some(p=>!p.approved);
+            if(!q)return true;
+            return m.name.toLowerCase().includes(q)||(m.synonyms||[]).some(s=>s.toLowerCase().includes(q));
+          };
           const visibleModels=sidebarFilter?c.models.filter(modelMatches):c.models;
-          if(sidebarFilter&&!visibleModels.length)return null;
+          if(sidebarFilter&&!visibleModels.length&&!(c.subcategories||[]).some(s=>s.models.some(modelMatches)))return null;
           return(
             <div key={c.id}>
               <div style={{display:'flex',alignItems:'center',background:'var(--row2)',borderBottom:'1px solid var(--border)',minHeight:36}}>
@@ -287,6 +465,22 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
                 )}
               </div>
               {(openCats[c.id]||sidebarFilter)&&<>
+
+                {/* ── SUB-CATEGORIES (3rd level) ── */}
+                {!sidebarFilter&&(c.subcategories||[]).map(s=>(
+                  <SubcatLevel key={s.id} brand={brand} cat={c} subcat={s} sel={sel} admin={admin} editor={editor}
+                    favorites={favorites} onToggleFav={onToggleFav} onNav={onNav}
+                    onRename={name=>onRenameSubcat&&onRenameSubcat(c.id,s.id,name)}
+                    onDelete={()=>onDeleteSubcat&&onDeleteSubcat(c.id,s.id)}
+                    onAddModel={name=>onAddModelToSubcat&&onAddModelToSubcat(c.id,s.id,name)}
+                    onDelModel={mid=>onDelModelFromSubcat&&onDelModelFromSubcat(c.id,s.id,mid)}
+                  />
+                ))}
+                {/* Add sub-category button (admin only) */}
+                {!sidebarFilter&&admin&&(
+                  <AddSubcatButton brand={brand} onAdd={name=>onAddSubcat&&onAddSubcat(c.id,name)}/>
+                )}
+
                 {addingMod===c.id&&(
                   <div style={{padding:'6px 10px',background:'var(--row2)',display:'flex',flexDirection:'column',gap:4,borderBottom:'1px solid var(--border)'}}>
                     <div style={{display:'flex',gap:6}}>
@@ -313,7 +507,16 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
                   <div key={m.id} style={{display:'flex',alignItems:'center',borderBottom:'1px solid var(--border)'}}>
                     <div onClick={()=>onNav(brand.id,c.id,m.id)}
                       style={{flex:1,padding:'8px 10px 8px 26px',cursor:'pointer',fontSize:13,color:sel?.mid===m.id?brand.color:'var(--text)',fontWeight:sel?.mid===m.id?'bold':'normal',background:sel?.mid===m.id?brand.light+'88':'transparent',borderRight:sel?.mid===m.id?`3px solid ${brand.color}`:'3px solid transparent'}}>
-                      {m.name}
+                      <div style={{display:'flex',alignItems:'center',gap:4}}>
+                        <span>{m.name}</span>
+                        {editor&&m.parts.length>0&&(()=>{
+                          const app=m.parts.filter(p=>p.approved).length;
+                          const tot=m.parts.length;
+                          if(app===tot)return<span style={{fontSize:9,color:'#4caf50'}}>✅</span>;
+                          if(app===0)return<span style={{fontSize:9,color:'#ff9800',opacity:.6}}>☐</span>;
+                          return<span style={{fontSize:9,color:'#ff9800'}}>☐{app}/{tot}</span>;
+                        })()}
+                      </div>
                       {m.synonyms?.length>0&&<div style={{fontSize:10,color:'var(--sub)',marginTop:2}}>{m.synonyms.join(' | ')}</div>}
                       {sidebarFilter&&(m.synonyms||[]).some(s=>s.toLowerCase().includes(sidebarFilter.toLowerCase()))&&!(m.name.toLowerCase().includes(sidebarFilter.toLowerCase()))&&(
                         <div style={{fontSize:10,color:'#7b1fa2',marginTop:2,fontWeight:'bold'}}>≡ {(m.synonyms||[]).filter(s=>s.toLowerCase().includes(sidebarFilter.toLowerCase())).join(', ')}</div>

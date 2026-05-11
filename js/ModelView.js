@@ -181,6 +181,16 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
           }
           <button onClick={()=>onToggleFav(model.id)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',marginRight:'auto'}}>{favorites.has(model.id)?'⭐':'☆'}</button>
           <span style={{color:'var(--sub)',fontSize:11}}>{model.parts.length.toLocaleString()} חלקים</span>
+          {editor&&(()=>{
+            const approvedCount=model.parts.filter(p=>p.approved).length;
+            const total=model.parts.length;
+            const allDone=approvedCount===total&&total>0;
+            return(
+              <span style={{padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:'bold',background:allDone?'#e8f5e9':'#fff8e1',color:allDone?'#2e7d32':'#e65100',border:`1px solid ${allDone?'#a5d6a7':'#ffe082'}`}}>
+                {allDone?'✅ הכל אושר':`☐ ${approvedCount}/${total} אושרו`}
+              </span>
+            );
+          })()}
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',fontSize:12,marginBottom:10}}>
           <span style={{color:'var(--sub)'}}>שמות נרדפים:</span>
@@ -269,6 +279,16 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
 
         <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}>
           <span style={{fontWeight:'bold',fontSize:14,color:'var(--text)'}}>🔩 רשימת חלקים</span>
+          {editor&&model.parts.length>0&&(
+            <button onClick={()=>{
+              const allApproved=model.parts.every(p=>p.approved);
+              onUpdate({parts:model.parts.map(p=>({...p,approved:!allApproved}))});
+            }}
+            title="אשר/בטל אישור לכולם"
+            style={sB(model.parts.every(p=>p.approved)?'#78909c':'#4caf50')}>
+              {model.parts.every(p=>p.approved)?'☐ בטל הכל':'✅ אשר הכל'}
+            </button>
+          )}
           <input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="חיפוש חכם..."
             style={{border:'1px solid var(--border)',borderRadius:16,padding:'5px 12px',fontSize:12,outline:'none',width:130,color:'var(--inp)',background:'var(--ibg)'}}/>
           {sortCol && <button onClick={()=>setSortCol(null)} style={sB('#9e9e9e')} title="בטל מיון">↺</button>}
@@ -342,7 +362,7 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
                 if (hi && !firstHiSet) { firstHiSet=true; ref=firstHiRef; }
                 return (
                   <tr key={p.id} ref={ref}
-                    style={{background:p.discontinued?'#fff0f0':isSel?'var(--sel)':p.pinned?'#fff8e1':hi?'var(--hi)':i%2?'var(--row2)':'var(--row1)',transition:'background .15s',cursor:'pointer'}}
+                    style={{background:p.discontinued?'#fff0f0':isSel?'var(--sel)':p.pinned?'#fff8e1':hi?'var(--hi)':p.approved?'#f0fff4':i%2?'var(--row2)':'var(--row1)',transition:'background .15s',cursor:'pointer'}}
                     onClick={()=>toggleRow(p.id)}
                     onMouseEnter={e=>{if(!isSel&&!hi&&!p.pinned&&!p.discontinued)e.currentTarget.style.background=brand.light+'88';}}
                     onMouseLeave={e=>{if(!isSel&&!hi)e.currentTarget.style.background=p.discontinued?'#fff0f0':p.pinned?'#fff8e1':i%2?'var(--row2)':'var(--row1)';}}>
@@ -383,11 +403,19 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
                     <td style={{padding:'5px 4px',textAlign:'center',borderBottom:'1px solid var(--border)'}} onClick={e=>e.stopPropagation()}>
                       <div style={{display:'flex',gap:2,justifyContent:'center',flexWrap:'wrap'}}>
                         <button onClick={()=>onAddToCart(brand.id,cat.id,model.id,p.id)} title="הוסף לסל" style={{background:'none',border:'none',cursor:'pointer',fontSize:13}}>🛒</button>
+                        {/* Approval button — admin/editor marks part as reviewed */}
+                        {editor&&(
+                          <button onClick={()=>onUpdate({parts:model.parts.map(pp=>pp.id!==p.id?pp:{...pp,approved:!pp.approved})})}
+                            title={p.approved?'מאושר — לחץ לביטול':'לא נבדק — לחץ לאישור'}
+                            style={{background:'none',border:'none',cursor:'pointer',fontSize:14,opacity:p.approved?1:.4}}>
+                            {p.approved?'✅':'☐'}
+                          </button>
+                        )}
                         {editor && <>
                           <button onClick={()=>onUpdate({parts:model.parts.map(pp=>pp.id!==p.id?pp:{...pp,pinned:!pp.pinned})})}
                             title={p.pinned?'הסר סימון':'סמן כנפוץ'} style={{background:'none',border:'none',cursor:'pointer',fontSize:12}}>{p.pinned?'📌':'☆'}</button>
                           <button onClick={()=>onUpdate({parts:model.parts.map(pp=>pp.id!==p.id?pp:{...pp,discontinued:!pp.discontinued})})}
-                            title={p.discontinued?'החזר לפעיל':'סמן כהופסק'} style={{background:'none',border:'none',cursor:'pointer',fontSize:12}}>{p.discontinued?'✅':'⛔'}</button>
+                            title={p.discontinued?'החזר לפעיל':'סמן כהופסק'} style={{background:'none',border:'none',cursor:'pointer',fontSize:12}}>{p.discontinued?'🔄':'⛔'}</button>
                         </>}
                         {(admin||editor) && <button onClick={()=>onDelPart(p.id)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:13}}>🗑</button>}
                       </div>

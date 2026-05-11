@@ -18,6 +18,9 @@ async function compressImg(file) {
 
 const updBrands=(brands,bid,cid,mid,fn)=>brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>c.id!==cid?c:{...c,models:c.models.map(m=>m.id!==mid?m:fn(m))})});
 
+// Update model inside a sub-category
+const updBrandsSubcat=(brands,bid,cid,scid,mid,fn)=>brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>c.id!==cid?c:{...c,subcategories:(c.subcategories||[]).map(s=>s.id!==scid?s:{...s,models:s.models.map(m=>m.id!==mid?m:fn(m))})})});
+
 function fuzzyMatch(q,text){
   // Exact match only — no typo tolerance
   const n=s=>s.toLowerCase().replace(/[\s\-_'"]/g,'');
