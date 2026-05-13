@@ -35,6 +35,8 @@ function App() {
   const [showTipsEdit,   setShowTipsEdit]   = useState(false);
   const [undoStack,      setUndoStack]      = useState([]); // last 5 reversible actions
   const [showUndo,       setShowUndo]       = useState(null); // {msg, fn}
+  const [compareList,    setCompareList]    = useState([]); // [{bid,cid,mid}]
+  const [showCompare,    setShowCompare]    = useState(false);
   const [broadcast,      setBroadcast]      = useState(null);
   const [newsItems,      setNewsItems]      = useState([]);
   const [favorites,      setFavorites]      = useState(() => {
@@ -58,24 +60,6 @@ function App() {
 
   useEffect(() => { document.documentElement.className=dark?'dark':''; document.body.style.background='var(--bg)'; }, [dark]);
   useEffect(() => { const t=setInterval(()=>setNow(new Date()),1000); return()=>clearInterval(t); }, []);
-
-  // Session timeout — viewers auto-logout after 30min inactivity
-  const lastActivityRef = useRef(Date.now());
-  useEffect(() => {
-    if(!loginRole)return;
-    const bump = () => { lastActivityRef.current = Date.now(); };
-    window.addEventListener('click', bump);
-    window.addEventListener('keydown', bump);
-    const check = setInterval(() => {
-      const idleMinutes = (Date.now() - lastActivityRef.current) / 60000;
-      const timeout = loginRole==='viewer' ? 30 : 120; // viewer=30min, editor/admin=2h
-      if(idleMinutes >= timeout){
-        setLoginRole(null); setSel(null); setSidebar(false);
-        alert('פג תוקף החיבור עקב חוסר פעילות. אנא התחבר מחדש.');
-      }
-    }, 60000);
-    return () => { window.removeEventListener('click',bump); window.removeEventListener('keydown',bump); clearInterval(check); };
-  }, [loginRole]);
 
   useEffect(() => {
     fbLoad().then(d => { setData(d||INIT()); setLoaded(true); }).catch(() => { setData(INIT()); setLoaded(true); });
@@ -129,24 +113,12 @@ function App() {
   }, [data]);
 
   const unresolvedCount = useMemo(() => reports.filter(r=>!r.resolved).length, [reports]);
-
-  const approvalStats = useMemo(() => {
-    if(!data) return {total:0, approved:0};
-    let total=0, approved=0;
-    data.brands.forEach(b=>b.categories.forEach(c=>{
-      const allModels=[...c.models,...(c.subcategories||[]).flatMap(s=>s.models)];
-      allModels.forEach(m=>m.parts.forEach(p=>{total++;if(p.approved)approved++;}));
-    }));
-    return {total, approved, pct: total>0?Math.round(approved/total*100):0};
-  }, [data]);
   const unresolvedTech  = useMemo(() => techRequests.filter(r=>!r.resolved).length, [techRequests]);
   const notifCount      = unresolvedCount + missingAlerts.length + unresolvedTech;
 
-  const brand  = sel&&data ? data.brands.find(b=>b.id===sel.bid) : null;
-  const cat    = brand     ? brand.categories.find(c=>c.id===sel.cid) : null;
-  const subcat = cat&&sel?.scid ? (cat.subcategories||[]).find(s=>s.id===sel.scid) : null;
-  const modelContainer = subcat || cat;
-  const model  = modelContainer ? modelContainer.models.find(m=>m.id===sel.mid) : null;
+  const brand = sel&&data ? data.brands.find(b=>b.id===sel.bid) : null;
+  const cat   = brand     ? brand.categories.find(c=>c.id===sel.cid) : null;
+  const model = cat       ? cat.models.find(m=>m.id===sel.mid) : null;
 
   const results = useMemo(() => {
     if (!data||!loginRole) return [];
@@ -161,9 +133,9 @@ function App() {
     return res;
   }, [query, data, loginRole]);
 
-  const nav = (bid,cid,mid,hq='',scid=null) => {
+  const nav = (bid,cid,mid,hq='') => {
     if (sel) navStack.current = [...navStack.current.slice(-9), sel];
-    setSel({bid,cid,mid,hq,scid}); setQuery('');
+    setSel({bid,cid,mid,hq}); setQuery('');
     const b=data?.brands.find(x=>x.id===bid);
     const c=b?.categories.find(x=>x.id===cid);
     const m=c?.models.find(x=>x.id===mid);
@@ -181,11 +153,7 @@ function App() {
   const goHome = () => { setSel(null); setQuery(''); navStack.current=[]; };
 
   const mut  = fn => setData(d => fn(d));
-  const mutM = (bid,cid,mid,fn,scid=null) => {
-    changedMids.current.add(mid);
-    if(scid) mut(d=>({...d,brands:updBrandsSubcat(d.brands,bid,cid,scid,mid,fn)}));
-    else      mut(d=>({...d,brands:updBrands(d.brands,bid,cid,mid,fn)}));
-  };
+  const mutM = (bid,cid,mid,fn) => { changedMids.current.add(mid); mut(d=>({...d,brands:updBrands(d.brands,bid,cid,mid,fn)})); };
 
   const logAction = (action, extra={}) => fbHist({action,...extra,role:loginRole,actor:loginLabel||loginRole});
 
@@ -198,35 +166,6 @@ function App() {
     setShowUndo({msg, fn: restoreFn});
     setTimeout(() => setShowUndo(null), 8000); // hide snackbar after 8s
   };
-  // ── Subcategory management ──
-  const addSubcat=(bid,cid,name)=>{
-    mut(d=>({...d,brands:d.brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>c.id!==cid?c:{...c,subcategories:[...(c.subcategories||[]),{id:gid(),name,models:[]}]})})}));
-  };
-  const renameSubcat=(bid,cid,scid,name)=>{
-    mut(d=>({...d,brands:d.brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>c.id!==cid?c:{...c,subcategories:(c.subcategories||[]).map(s=>s.id!==scid?s:{...s,name})})})}));
-  };
-  const deleteSubcat=(bid,cid,scid)=>{
-    if(!confirm('למחוק תת-קטגוריה? כל הדגמים בה יועברו לקטגוריה הראשית.'))return;
-    mut(d=>({...d,brands:d.brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>{
-      if(c.id!==cid)return c;
-      const sc=(c.subcategories||[]).find(s=>s.id===scid);
-      const movedModels=sc?sc.models:[];
-      movedModels.forEach(m=>changedMids.current.add(m.id));
-      return{...c,models:[...c.models,...movedModels],subcategories:(c.subcategories||[]).filter(s=>s.id!==scid)};
-    })})}));
-  };
-  const addModelToSubcat=(bid,cid,scid,name)=>{
-    const id=gid(); changedMids.current.add(id);
-    const nm={id,name,synonyms:[],images:[],notes:'',columns:DCOLS(),parts:[]};
-    mut(d=>({...d,brands:d.brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>c.id!==cid?c:{...c,subcategories:(c.subcategories||[]).map(s=>s.id!==scid?s:{...s,models:[...s.models,nm]})})})}));
-    logAction('הוסף דגם לתת-קטגוריה',{model:name});
-  };
-  const delModelFromSubcat=async(bid,cid,scid,mid)=>{
-    try{await db.collection('parts').doc(mid).delete();}catch{}
-    mut(d=>({...d,brands:d.brands.map(b=>b.id!==bid?b:{...b,categories:b.categories.map(c=>c.id!==cid?c:{...c,subcategories:(c.subcategories||[]).map(s=>s.id!==scid?s:{...s,models:s.models.filter(m=>m.id!==mid)})})})}));
-    if(sel?.mid===mid)setSel(null);
-  };
-
   const logAlert  = (type, text) => {
     fbLogAlert({type,text,actor:loginLabel||loginRole}).then(()=>fbGetAlerts().then(setAlerts));
   };
@@ -305,10 +244,14 @@ function App() {
     mutM(db2,dc,dm,m=>({...m,parts:[...m.parts,...srcM.parts.map(p=>({...p,id:gid()}))]}));
   };
 
-  const handleAddModel = (b,cid,name) => {
+  const handleAddModel = (b,cid,name,scid) => {
     const id=gid(); changedMids.current.add(id);
     const nm={id,name,synonyms:[],images:[],notes:'',columns:DCOLS(),parts:[]};
-    mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,models:[...c.models,nm]})})}));
+    mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>{
+      if(c.id!==cid)return c;
+      if(scid)return{...c,subCategories:(c.subCategories||[]).map(sc=>sc.id!==scid?sc:{...sc,models:[...sc.models,nm]})};
+      return{...c,models:[...c.models,nm]};
+    })})}));
     logAction('הוסף דגם',{model:name,brand:b.name});
     logAlert('add', `נוסף דגם חדש: ${name} (${b.name})`);
     fbAddNews(`נוסף דגם חדש: ${name} (${b.name})`).then(()=>fbGetNews().then(docs=>setNewsItems(docs.map(d=>d.text))));
@@ -447,11 +390,6 @@ function App() {
             {now.toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'})} {now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}
           </span>
           {saving==='saving'&&<span style={{fontSize:11,color:'rgba(255,255,255,.8)',flexShrink:0}}>💾</span>}
-        {editor&&approvalStats.total>0&&(
-          <span style={{fontSize:10,background:'rgba(255,255,255,.15)',borderRadius:10,padding:'2px 8px',flexShrink:0,color:approvalStats.pct===100?'#a5d6a7':'rgba(255,255,255,.8)'}}>
-            {approvalStats.pct===100?'✅':'☐'} {approvalStats.approved}/{approvalStats.total} אושרו
-          </span>
-        )}
           {saving==='saved' &&<span style={{fontSize:11,color:'#a5d6a7',flexShrink:0}}>✓</span>}
           {saving==='error' &&<button onClick={()=>alert('שגיאת שמירה: '+saveErr)} style={{fontSize:11,color:'#fff',background:'#e53935',border:'none',borderRadius:5,padding:'3px 7px',cursor:'pointer',flexShrink:0}}>⚠</button>}
 
@@ -459,6 +397,9 @@ function App() {
           <div style={{flex:1}}/>
 
           {/* Common buttons */}
+          <button onClick={()=>{setShowCompare(true);}} title="השוואת דגמים" style={{...bB('rgba(255,255,255,.18)'),position:'relative'}}>
+            ⚖️{compareList.length>0&&<span style={{position:'absolute',top:-4,left:-4,background:'#ff6f00',color:'#fff',borderRadius:'50%',width:16,height:16,fontSize:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'bold'}}>{compareList.length}</span>}
+          </button>
           <button onClick={()=>setShowCart(true)} style={{...bB('rgba(255,255,255,.18)'),position:'relative'}}>
             🛒{cart.length>0&&<span style={{position:'absolute',top:-4,left:-4,background:'#e53935',color:'#fff',borderRadius:'50%',width:16,height:16,fontSize:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'bold'}}>{cart.length}</span>}
           </button>
@@ -564,48 +505,61 @@ function App() {
         <aside style={{width:sidebar?265:0,flexShrink:0,overflow:'hidden',transition:'width .25s',background:'var(--sidebar)',borderLeft:'1px solid var(--border)'}}>
           <div style={{width:265,overflowY:'auto',height:'100%',display:'flex',flexDirection:'column'}}>
             <div style={{padding:'8px 10px',borderBottom:'1px solid var(--border)',flexShrink:0}}>
-              <div style={{position:'relative',marginBottom:editor?5:0}}>
-                <input value={sidebarFilter==='__unapproved__'?'':sidebarFilter} onChange={e=>setSidebarFilter(e.target.value)}
-                  placeholder="🔍 סינון דגמים / שמות נרדפים..."
+              <div style={{position:'relative'}}>
+                <input value={sidebarFilter} onChange={e=>setSidebarFilter(e.target.value)}
+                  placeholder="🔍 סינון דגמים..."
                   style={{width:'100%',padding:'6px 28px 6px 10px',borderRadius:16,border:'1px solid var(--border)',fontSize:12,outline:'none',color:'var(--inp)',background:'var(--ibg)',boxSizing:'border-box'}}/>
                 {sidebarFilter&&<button onClick={()=>setSidebarFilter('')} style={{position:'absolute',left:6,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#999',fontSize:13}}>✕</button>}
               </div>
-              {editor&&<button onClick={()=>setSidebarFilter(v=>v==='__unapproved__'?'':'__unapproved__')}
-                style={{width:'100%',padding:'4px 8px',borderRadius:8,border:`1px solid ${sidebarFilter==='__unapproved__'?'#ff9800':'var(--border)'}`,background:sidebarFilter==='__unapproved__'?'#fff3e0':'transparent',color:sidebarFilter==='__unapproved__'?'#e65100':'var(--sub)',cursor:'pointer',fontSize:11,fontWeight:sidebarFilter==='__unapproved__'?'bold':'normal'}}>
-                {sidebarFilter==='__unapproved__'?'☑ מציג לא מאושרים':'☐ הצג רק לא מאושרים'}
-              </button>}
             </div>
             <div style={{flex:1,overflowY:'auto'}}>
               {data.brands.map(b=>(
                 <SidebarBrand key={b.id} brand={b} sel={sel} editor={editor} admin={admin}
                   favorites={favorites} onToggleFav={toggleFav} onNav={nav}
                   sidebarFilter={sidebarFilter}
-                  onAddSubcat={(cid,name)=>addSubcat(b.id,cid,name)}
-                  onRenameSubcat={(cid,scid,name)=>renameSubcat(b.id,cid,scid,name)}
-                  onDeleteSubcat={(cid,scid)=>deleteSubcat(b.id,cid,scid)}
-                  onAddModelToSubcat={(cid,scid,name)=>addModelToSubcat(b.id,cid,scid,name)}
-                  onDelModelFromSubcat={(cid,scid,mid)=>delModelFromSubcat(b.id,cid,scid,mid)}
-                  onAddModel={(cid,name)=>handleAddModel(b,cid,name)}
-                  onDelModel={async(cid,mid)=>{
+                  compareList={compareList}
+                  onToggleCompare={(bid,cid,mid)=>{
+                    setCompareList(p=>{
+                      const exists=p.some(x=>x.mid===mid);
+                      if(exists)return p.filter(x=>x.mid!==mid);
+                      if(p.length>=3){alert('ניתן להשוות עד 3 דגמים בו-זמנית');return p;}
+                      return[...p,{bid,cid,mid}];
+                    });
+                    setShowCompare(true);
+                  }}
+                  onAddModel={(cid,name,scid)=>handleAddModel(b,cid,name,scid)}
+                  onDelModel={async(cid,mid,scid)=>{
                     if(!confirm('למחוק?'))return;
                     const catObj=b.categories.find(c=>c.id===cid);
-                    const m=catObj?.models.find(m=>m.id===mid);
+                    const sourceModels=scid?(catObj?.subCategories||[]).find(sc=>sc.id===scid)?.models:catObj?.models;
+                    const m=sourceModels&&sourceModels.find(m=>m.id===mid);
                     const savedModel=m?JSON.parse(JSON.stringify(m)):null;
                     fbSaveSnapshot(data,loginLabel||loginRole,'לפני מחיקת דגם');
                     if(m) logAlert('delete',`נמחק דגם: ${m.name} (${b.name})`);
                     try{await db.collection('parts').doc(mid).delete();}catch{}
-                    mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,models:c.models.filter(m=>m.id!==mid)})})}));
-                    if(sel?.mid===mid)setSel(null);
+                    mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>{
+                      if(c.id!==cid)return c;
+                      if(scid)return{...c,subCategories:(c.subCategories||[]).map(sc=>sc.id!==scid?sc:{...sc,models:sc.models.filter(m=>m.id!==mid)})};
+                      return{...c,models:c.models.filter(m=>m.id!==mid)};
+                    })})}));
+                    if(sel&&sel.mid===mid)setSel(null);
                     if(savedModel){
-                      const newId=savedModel.id;changedMids.current.add(newId);
+                      changedMids.current.add(savedModel.id);
                       pushUndo(`ביטול מחיקת דגם: ${savedModel.name}`,()=>{
-                        mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,models:[...c.models,savedModel]})})}));
+                        mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>{
+                          if(c.id!==cid)return c;
+                          if(scid)return{...c,subCategories:(c.subCategories||[]).map(sc=>sc.id!==scid?sc:{...sc,models:[...sc.models,savedModel]})};
+                          return{...c,models:[...c.models,savedModel]};
+                        })})}));
                       });
                     }
                   }}
-                  onAddCat={name=>mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:[...bb.categories,{id:gid(),name,models:[]}]})}))}
+                  onAddCat={name=>mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:[...bb.categories,{id:gid(),name,models:[],subCategories:[]}]})}))}
                   onEditCat={(cid,name)=>mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,name})})}))}
                   onDelCat={cid=>{if(!confirm('למחוק?'))return;mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.filter(c=>c.id!==cid)})}));}}
+                  onAddSubCat={(cid,name)=>mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,subCategories:[...(c.subCategories||[]),{id:gid(),name,models:[]}]})})}))}\
+                  onEditSubCat={(cid,scid,name)=>mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,subCategories:(c.subCategories||[]).map(sc=>sc.id!==scid?sc:{...sc,name})})})}))}\
+                  onDelSubCat={(cid,scid)=>{if(!confirm('למחוק תת-קטגוריה?'))return;mut(d=>({...d,brands:d.brands.map(bb=>bb.id!==b.id?bb:{...bb,categories:bb.categories.map(c=>c.id!==cid?c:{...c,subCategories:(c.subCategories||[]).filter(sc=>sc.id!==scid)})})});}}\
                 />
               ))}
             </div>
@@ -616,20 +570,20 @@ function App() {
         {/* MAIN */}
         <main style={{flex:1,overflowY:'auto',padding:14,paddingBottom:44}}>
           {!model
-            ?<HomeScreen data={data} onNav={nav} recent={recent} favorites={favorites} onToggleFav={toggleFav} loginRole={loginRole} reports={reports} techRequests={techRequests} alerts={alerts}/>
+            ?<HomeScreen data={data} onNav={nav} recent={recent} favorites={favorites} onToggleFav={toggleFav} loginRole={loginRole} reports={reports} techRequests={techRequests} alerts={alerts} onOpenSidebar={()=>setSidebar(true)}/>
             :<ModelView
                 key={model.id} brand={brand} cat={cat} model={model}
                 editor={editor} admin={admin} viewer={viewer} hq={sel?.hq||''}
                 data={data} favorites={favorites} onToggleFav={toggleFav} loginRole={loginRole}
                 partsDisclaimer={partsDisclaimer}
                 onUpdateDisclaimer={v=>mut(d=>({...d,partsDisclaimer:v}))}
-                onUpdate={u=>{changedMids.current.add(model.id);mutM(brand.id,cat.id,model.id,m=>({...m,...u}),sel?.scid);}}
+                onUpdate={u=>{changedMids.current.add(model.id);mutM(brand.id,cat.id,model.id,m=>({...m,...u}));}}
                 onRenameModel={name=>{
                   changedMids.current.add(model.id);
                   mut(d=>({...d,brands:d.brands.map(b=>b.id!==brand.id?b:{...b,categories:b.categories.map(c=>c.id!==cat.id?c:{...c,models:c.models.map(m=>m.id!==model.id?m:{...m,name})})})}));
                   logAction('שינוי שם דגם',{from:model.name,to:name});
                 }}
-                onAddPart={()=>mutM(brand.id,cat.id,model.id,m=>({...m,parts:[...m.parts,{id:gid(),discontinued:false,tags:'',pinned:false,comments:[],values:Object.fromEntries(m.columns.map(c=>[c.id,'']))}]}),sel?.scid)}
+                onAddPart={()=>mutM(brand.id,cat.id,model.id,m=>({...m,parts:[...m.parts,{id:gid(),discontinued:false,tags:'',pinned:false,comments:[],values:Object.fromEntries(m.columns.map(c=>[c.id,'']))}]}))}
                 onDelPart={pid=>{
                   const p=model.parts.find(x=>x.id===pid);
                   const partName=p?.values?.nameHe||p?.values?.nameEn||pid;
@@ -640,10 +594,10 @@ function App() {
                     mutM(brand.id,cat.id,model.id,m=>({...m,parts:savedParts}));
                   });
                 }}
-                onCell={(pid,cid,v)=>mutM(brand.id,cat.id,model.id,m=>({...m,parts:m.parts.map(p=>p.id!==pid?p:{...p,values:{...p.values,[cid]:v}})}),sel?.scid)}
-                onColName={(cid,n)=>mutM(brand.id,cat.id,model.id,m=>({...m,columns:m.columns.map(c=>c.id!==cid?c:{...c,name:n})}),sel?.scid)}
+                onCell={(pid,cid,v)=>mutM(brand.id,cat.id,model.id,m=>({...m,parts:m.parts.map(p=>p.id!==pid?p:{...p,values:{...p.values,[cid]:v}})}))}
+                onColName={(cid,n)=>mutM(brand.id,cat.id,model.id,m=>({...m,columns:m.columns.map(c=>c.id!==cid?c:{...c,name:n})}))}
                 onMoveCol={(cid,dir)=>mutM(brand.id,cat.id,model.id,m=>{const cols=[...m.columns];const idx=cols.findIndex(c=>c.id===cid);const ni=idx+dir;if(ni<0||ni>=cols.length)return m;[cols[idx],cols[ni]]=[cols[ni],cols[idx]];return{...m,columns:cols};})}
-                onAddCol={()=>mutM(brand.id,cat.id,model.id,m=>{const cid=gid();return{...m,columns:[...m.columns,{id:cid,name:'עמודה חדשה'}],parts:m.parts.map(p=>({...p,values:{...p.values,[cid]:''}}))},sel?.scid)}
+                onAddCol={()=>mutM(brand.id,cat.id,model.id,m=>{const cid=gid();return{...m,columns:[...m.columns,{id:cid,name:'עמודה חדשה'}],parts:m.parts.map(p=>({...p,values:{...p.values,[cid]:''}}))}})}
                 onDelCol={cid=>{
                   const savedCols=[...model.columns];
                   const savedParts=JSON.parse(JSON.stringify(model.parts));
@@ -656,7 +610,7 @@ function App() {
                 onPaste={rows=>mutM(brand.id,cat.id,model.id,m=>({...m,parts:[...m.parts,...rows.map(r=>({id:gid(),discontinued:false,tags:'',pinned:false,comments:[],values:Object.fromEntries(m.columns.map((c,i)=>[c.id,r[i]||'']))}))]}))}
                 onImgUpload={e=>handleImgUpload(e,brand.id,cat.id,model.id)}
                 onDelImg={idx=>mutM(brand.id,cat.id,model.id,m=>({...m,images:m.images.filter((_,i)=>i!==idx)}))}
-                onImgUrl={url=>mutM(brand.id,cat.id,model.id,m=>({...m,images:[...(m.images||[]),url]}),sel?.scid)}
+                onImgUrl={url=>mutM(brand.id,cat.id,model.id,m=>({...m,images:[...(m.images||[]),url]}))}
                 onOpenImg={(imgs,idx)=>{setImgModal({imgs,idx});setImgZoom(1);}}
                 onMove={(toBid,toCid)=>moveModel(brand.id,cat.id,model.id,toBid,toCid)}
                 onDuplicate={()=>duplicateModel(brand.id,cat.id,model.id)}
@@ -690,6 +644,7 @@ function App() {
 
       {/* PANELS */}
       {showCart     &&<CartPanel cart={cart} data={data} onRemove={removeFromCart} onClear={clearCart} onClose={()=>setShowCart(false)} waDefaults={data.waDefaults||['nameHe','tadPn']}/>}
+      {showCompare  &&<ComparePanel compareList={compareList} data={data} onClose={()=>setShowCompare(false)} onRemove={mid=>setCompareList(p=>p.filter(x=>x.mid!==mid))}/>}
       {showNotif    &&<NotificationsPanel
         missingAlerts={missingAlerts} reports={reports} techRequests={techRequests} alerts={alerts}
         data={data} initialTab={notifInitTab}

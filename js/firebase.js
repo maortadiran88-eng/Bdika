@@ -8,10 +8,7 @@ async function fbLoad() {
   if (!d.users) d.users = DEFAULT_USERS;
   if (!d.partsDisclaimer) d.partsDisclaimer = DEFAULT_DISCLAIMER;
   const mids = [];
-  d.brands.forEach(b => b.categories.forEach(c => {
-    c.models.forEach(m => mids.push(m.id));
-    (c.subcategories||[]).forEach(s => s.models.forEach(m => mids.push(m.id)));
-  }));
+  d.brands.forEach(b => b.categories.forEach(c => c.models.forEach(m => mids.push(m.id))));
   if (!mids.length) return d;
   const chunks = [];
   for (let i=0;i<mids.length;i+=20) chunks.push(mids.slice(i,i+20));
@@ -22,20 +19,14 @@ async function fbLoad() {
   }
   const pm = {};
   allD.forEach(doc => { if (doc.exists) pm[doc.id] = doc.data(); });
-  // Helper to hydrate a single model from parts collection
-  const hydrateModel = (m, pd) => {
-    m.parts    = (pd.parts||[]).map(p=>({discontinued:false,tags:'',pinned:false,comments:[],approved:false,...p}));
+  d.brands.forEach(b => b.categories.forEach(c => c.models.forEach(m => {
+    const pd = pm[m.id]||{};
+    m.parts    = (pd.parts||[]).map(p=>({discontinued:false,tags:'',pinned:false,comments:[],...p}));
     m.images   = pd.images   || [];
     m.columns  = pd.columns  || DCOLS();
     m.synonyms = pd.synonyms || [];
     m.notes    = pd.notes    || '';
-  };
-  d.brands.forEach(b => b.categories.forEach(c => {
-    // Hydrate direct models
-    c.models.forEach(m => hydrateModel(m, pm[m.id]||{}));
-    // Hydrate subcategory models
-    (c.subcategories||[]).forEach(s => s.models.forEach(m => hydrateModel(m, pm[m.id]||{})));
-  }));
+  })));
   return d;
 }
 
@@ -47,21 +38,14 @@ async function fbSave(data, mids) {
     welcomeTitle:data.welcomeTitle, welcomeSub:data.welcomeSub,
     disclaimer:data.disclaimer, partsDisclaimer:data.partsDisclaimer||DEFAULT_DISCLAIMER,
     tips:data.tips||[], greetings:data.greetings||null, systemMsg:data.systemMsg||null,
-    brands:data.brands.map(b=>({...b,categories:b.categories.map(c=>({...c,
-      models:c.models.map(m=>({id:m.id,name:m.name})),
-      subcategories:(c.subcategories||[]).map(s=>({id:s.id,name:s.name,models:s.models.map(m=>({id:m.id,name:m.name}))}))
-    }))}))}))
+    brands:data.brands.map(b=>({...b,categories:b.categories.map(c=>({...c,models:c.models.map(m=>({id:m.id,name:m.name}))}))}))
   };
   await db.collection('catalog').doc('meta').set({d:meta});
   const batch = db.batch();
-  const saveModel=(m)=>{
+  data.brands.forEach(b=>b.categories.forEach(c=>c.models.forEach(m=>{
     if(!mids.has(m.id))return;
     batch.set(db.collection('parts').doc(m.id),{parts:m.parts||[],images:m.images||[],columns:m.columns||DCOLS(),synonyms:m.synonyms||[],notes:m.notes||''});
-  };
-  data.brands.forEach(b=>b.categories.forEach(c=>{
-    c.models.forEach(saveModel);
-    (c.subcategories||[]).forEach(s=>s.models.forEach(saveModel));
-  }));
+  })));
   await batch.commit();
 }
 
