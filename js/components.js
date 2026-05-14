@@ -14,7 +14,7 @@ function LoginScreen({data,onLogin}){
         <div style={{fontWeight:'bold',fontSize:20,color:'#1565c0',marginBottom:6,lineHeight:1.4,whiteSpace:'pre-line'}}>{data.welcomeTitle||'ברוך הבא לקטלוג חלקי חילוף'}</div>
         <div style={{fontSize:14,color:'#6b7280',marginBottom:28}}>{data.welcomeSub||'תחת המותג תדיראן'}</div>
         <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="הזן סיסמת כניסה" autoFocus
-          style={{width:'100%',padding:'13px 16px',borderRadius:10,border:'2px solid '+(err?'#e53935':'#e5e7eb'),fontSize:15,textAlign:'center',marginBottom:10,outline:'none',boxSizing:'border-box'}}/>
+          style={{width:'100%',padding:'13px 16px',borderRadius:10,border:`2px solid ${err?'#e53935':'#e5e7eb'}`,fontSize:15,textAlign:'center',marginBottom:10,outline:'none',boxSizing:'border-box'}}/>
         {err&&<div style={{color:'#e53935',fontSize:13,marginBottom:10,fontWeight:'bold'}}>{err}</div>}
         <button onClick={submit} style={{width:'100%',padding:'13px',background:'linear-gradient(135deg,#1565c0,#1976d2)',color:'#fff',border:'none',borderRadius:10,fontSize:16,fontWeight:'bold',cursor:'pointer',marginBottom:22}}>
           כניסה למערכת ←
@@ -27,6 +27,8 @@ function LoginScreen({data,onLogin}){
   );
 }
 
+
+
 function TodoList({data,reports,techRequests,alerts}){
   const missingTadPn=[];
   data.brands.forEach(b=>b.categories.forEach(c=>c.models.forEach(m=>{
@@ -37,17 +39,19 @@ function TodoList({data,reports,techRequests,alerts}){
   const openTech=techRequests.filter(r=>!r.resolved).length;
   const modelsNoMakat=missingTadPn.reduce((s,x)=>s+x.count,0);
   const recentAlerts=alerts.slice(0,3);
+
   const items=[
-    modelsNoMakat>0&&{icon:'⚠️',color:'#e65100',bg:'#fff3e0',text:modelsNoMakat+' חלקים ב-'+missingTadPn.length+' דגמים חסרי מקט תדיראן'},
-    openReports>0&&{icon:'🔴',color:'#c62828',bg:'#ffebee',text:openReports+' דיווחי שגיאה ממתינים לטיפול'},
-    openTech>0&&{icon:'💬',color:'#1565c0',bg:'#e3f2fd',text:openTech+' בקשות טכנאים לדגמים חסרים'},
+    modelsNoMakat>0&&{icon:'⚠️',color:'#e65100',bg:'#fff3e0',text:`${modelsNoMakat} חלקים ב-${missingTadPn.length} דגמים חסרי מק"ט תדיראן`},
+    openReports>0&&{icon:'🔴',color:'#c62828',bg:'#ffebee',text:`${openReports} דיווחי שגיאה ממתינים לטיפול`},
+    openTech>0&&{icon:'💬',color:'#1565c0',bg:'#e3f2fd',text:`${openTech} בקשות טכנאים לדגמים חסרים`},
     modelsNoMakat===0&&openReports===0&&openTech===0&&{icon:'✅',color:'#2e7d32',bg:'#e8f5e9',text:'הכל מעודכן! אין משימות פתוחות.'},
   ].filter(Boolean);
+
   return(
     <div style={{background:'var(--card)',borderRadius:12,padding:'14px 16px',marginBottom:16,boxShadow:'0 1px 4px var(--shadow)'}}>
       <div style={{fontWeight:'bold',fontSize:14,color:'var(--text)',marginBottom:10}}>📋 לוח משימות</div>
       {items.map((item,i)=>(
-        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:8,background:item.bg,marginBottom:6,border:'1px solid '+item.color+'22'}}>
+        <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:8,background:item.bg,marginBottom:6,border:`1px solid ${item.color}22`}}>
           <span style={{fontSize:16,flexShrink:0}}>{item.icon}</span>
           <span style={{flex:1,fontSize:13,color:item.color,fontWeight:'500'}}>{item.text}</span>
         </div>
@@ -114,28 +118,36 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
   const total=data.brands.reduce((s,b)=>s+b.categories.reduce((ss,c)=>ss+c.models.length,0),0);
   const totalParts=data.brands.reduce((s,b)=>s+b.categories.reduce((ss,c)=>ss+c.models.reduce((sss,m)=>sss+m.parts.length,0),0),0);
   const greeting=getGreeting(data.greetings);
-  const fmtTime=ts=>{const diff=Math.floor((Date.now()-ts)/60000);if(diff<1)return 'עכשיו';if(diff<60)return 'לפני '+diff+' דק\'';if(diff<1440)return 'לפני '+Math.floor(diff/60)+' שע\'';return new Date(ts).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});};
-  const recentModels=recent.slice(0,6).map(rv=>{const b=data.brands.find(x=>x.id===rv.bid);const c=b&&b.categories.find(x=>x.id===rv.cid);const m=c&&c.models.find(x=>x.id===rv.mid);if(!b||!c||!m)return null;return{b,c,m,ts:rv.ts};}).filter(Boolean);
+
+  const fmtTime=ts=>{const diff=Math.floor((Date.now()-ts)/60000);if(diff<1)return'עכשיו';if(diff<60)return`לפני ${diff} דק'`;if(diff<1440)return`לפני ${Math.floor(diff/60)} שע'`;return new Date(ts).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});};
+  const recentModels=recent.slice(0,6).map(rv=>{const b=data.brands.find(x=>x.id===rv.bid);const c=b?.categories.find(x=>x.id===rv.cid);const m=c?.models.find(x=>x.id===rv.mid);if(!b||!c||!m)return null;return{b,c,m,ts:rv.ts};}).filter(Boolean);
   const favModels=[];data.brands.forEach(b=>b.categories.forEach(c=>c.models.forEach(m=>{if(favorites.has(m.id))favModels.push({b,c,m});})));
+
   return(
     <div style={{paddingBottom:44}}>
+      {/* Greeting */}
       <div style={{background:'var(--card)',borderRadius:12,padding:'14px 18px',marginBottom:16,boxShadow:'0 1px 4px var(--shadow)',textAlign:'center'}}>
         <span style={{fontWeight:'bold',fontSize:20,color:'var(--text)'}}>{greeting}</span>
       </div>
+
+      {/* Stats */}
       <div style={{display:'flex',gap:10,marginBottom:16,flexWrap:'wrap'}}>
-        {[['❄️','דגמים',total,'#1565c0'],['🔩','חלקים',totalParts.toLocaleString(),'#2e7d32'],['🏷️','מותגים',data.brands.length,'#6a1b9a']].map(function(x){var ic=x[0],lb=x[1],v=x[2],col=x[3];return(
+        {[['❄️','דגמים',total,'#1565c0'],['🔩','חלקים',totalParts.toLocaleString(),'#2e7d32'],['🏷️','מותגים',data.brands.length,'#6a1b9a']].map(([ic,lb,v,col])=>(
           <div key={lb} style={{background:'var(--card)',borderRadius:12,padding:'12px 16px',flex:'1 1 90px',boxShadow:'0 1px 4px var(--shadow)',display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:26}}>{ic}</span>
             <div><div style={{fontSize:18,fontWeight:'bold',color:col}}>{v}</div><div style={{fontSize:11,color:'var(--sub)'}}>{lb}</div></div>
           </div>
-        );})}
+        ))}
       </div>
+
+
+      {/* Favorites */}
       {favModels.length>0&&(
         <div style={{marginBottom:16}}>
           <div style={{fontWeight:'bold',fontSize:13,color:'var(--sub)',marginBottom:8}}>⭐ מועדפים</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(148px,1fr))',gap:8}}>
-            {favModels.map(function(x){var b=x.b,c=x.c,m=x.m;return(
-              <div key={m.id} style={{background:'var(--card)',borderRadius:10,padding:'11px 13px',cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)',borderRight:'4px solid '+b.color,position:'relative',transition:'all .15s'}}
+            {favModels.map(({b,c,m})=>(
+              <div key={m.id} style={{background:'var(--card)',borderRadius:10,padding:'11px 13px',cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)',borderRight:`4px solid ${b.color}`,position:'relative',transition:'all .15s'}}
                 onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e=>e.currentTarget.style.transform=''}>
                 <button onClick={e=>{e.stopPropagation();onToggleFav(m.id);}} style={{position:'absolute',top:6,left:8,background:'none',border:'none',fontSize:14,cursor:'pointer'}}>⭐</button>
                 <div onClick={()=>onNav(b.id,c.id,m.id)}>
@@ -144,34 +156,40 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
                   <div style={{fontSize:11,color:b.color,fontWeight:'bold'}}>{m.parts.length} חלקים</div>
                 </div>
               </div>
-            );})}
+            ))}
           </div>
         </div>
       )}
+
+      {/* Recently viewed */}
       {recentModels.length>0&&(
         <div style={{marginBottom:16}}>
           <div style={{fontWeight:'bold',fontSize:13,color:'var(--sub)',marginBottom:8}}>🕐 נצפו לאחרונה</div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(148px,1fr))',gap:8}}>
-            {recentModels.map(function(x){var b=x.b,c=x.c,m=x.m,ts=x.ts;return(
-              <div key={m.id} onClick={()=>onNav(b.id,c.id,m.id)} style={{background:'var(--card)',borderRadius:10,padding:'11px 13px',cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)',borderRight:'4px solid '+b.color,transition:'all .15s'}}
+            {recentModels.map(({b,c,m,ts})=>(
+              <div key={m.id} onClick={()=>onNav(b.id,c.id,m.id)} style={{background:'var(--card)',borderRadius:10,padding:'11px 13px',cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)',borderRight:`4px solid ${b.color}`,transition:'all .15s'}}
                 onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e=>e.currentTarget.style.transform=''}>
                 <div style={{fontSize:10,color:'var(--sub)',marginBottom:3}}>{fmtTime(ts)}</div>
                 <div style={{fontWeight:'bold',color:'var(--text)',fontSize:12,marginBottom:2}}>{m.name}</div>
                 <div style={{fontSize:10,color:'var(--sub)',marginBottom:3}}>{b.name} · {c.name}</div>
                 <div style={{fontSize:11,color:b.color,fontWeight:'bold'}}>{m.parts.length} חלקים</div>
               </div>
-            );})}
+            ))}
           </div>
         </div>
       )}
+
+      {/* "Missing model?" — always after recent */}
       <TechRequestBox loginRole={loginRole}/>
+
+      {/* Tech site link — single, always here */}
       <TechSiteLink/>
-      {/* ── Filter hint banner ── */}
-      <div style={{background:'linear-gradient(135deg,#e3f2fd,#bbdefb)',borderRadius:12,padding:'14px 18px',marginBottom:16,border:'2px dashed #1565c060',display:'flex',alignItems:'center',gap:12,cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)'}}
-        onClick={onOpenSidebar}>
+
+      {/* Filter hint banner */}
+      <div onClick={onOpenSidebar} style={{background:'linear-gradient(135deg,#e3f2fd,#bbdefb)',borderRadius:12,padding:'14px 18px',marginBottom:16,border:'2px dashed #1565c060',display:'flex',alignItems:'center',gap:12,cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)'}}>
         <span style={{fontSize:26}}>☰</span>
         <div style={{flex:1}}>
-          <div style={{fontWeight:'bold',fontSize:14,color:'#1565c0',marginBottom:2}}>לסינון דגמים לחץ על כפתור הסרגל</div>
+          <div style={{fontWeight:'bold',fontSize:14,color:'#1565c0',marginBottom:2}}>לסינון דגמים יש ללחוץ על כפתור הסרגל</div>
           <div style={{fontSize:12,color:'#1976d2'}}>בחר מותג ← קטגוריה ← תת-קטגוריה ← דגם</div>
         </div>
         <span style={{fontSize:22,color:'#1565c0'}}>←</span>
@@ -180,22 +198,15 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
   );
 }
 
-// ══════════ SIDEBAR BRAND — with sub-categories ══════════
+// ══════════ SIDEBAR BRAND ══════════
 function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddModel,onDelModel,onAddCat,onEditCat,onDelCat,onAddSubCat,onEditSubCat,onDelSubCat,sidebarFilter,compareList,onToggleCompare}){
-  const[open,setOpen]=useState(false);
-  const[openCats,setOpenCats]=useState({});
-  const[openSubs,setOpenSubs]=useState({});
-  const[addingMod,setAddingMod]=useState(null);
-  const[newModName,setNewModName]=useState('');
-  const[editCat,setEditCat]=useState(null);
-  const[addingCat,setAddingCat]=useState(false);
-  const[newCatName,setNewCatName]=useState('');
-  const[addingSub,setAddingSub]=useState(null);
-  const[newSubName,setNewSubName]=useState('');
-  const[editSub,setEditSub]=useState(null);
+  const[open,setOpen]=useState(false);const[openCats,setOpenCats]=useState({});const[openSubs,setOpenSubs]=useState({});
+  const[addingMod,setAddingMod]=useState(null);const[newModName,setNewModName]=useState('');
+  const[editCat,setEditCat]=useState(null);const[addingCat,setAddingCat]=useState(false);const[newCatName,setNewCatName]=useState('');
+  const[addingSub,setAddingSub]=useState(null);const[newSubName,setNewSubName]=useState('');const[editSub,setEditSub]=useState(null);
   const modRef=useRef();
 
-  useEffect(()=>{if(sel&&sel.bid===brand.id){setOpen(true);setOpenCats(p=>({...p,[sel.cid]:true}));if(sel.scid)setOpenSubs(p=>({...p,[sel.scid]:true}));}},[sel&&sel.bid,sel&&sel.cid,sel&&sel.scid]);
+  useEffect(()=>{if(sel?.bid===brand.id){setOpen(true);setOpenCats(p=>({...p,[sel.cid]:true}));if(sel.scid)setOpenSubs(p=>({...p,[sel.scid]:true}));}},[sel?.bid,sel?.cid,sel?.scid]);
   useEffect(()=>{
     if(!sidebarFilter)return;
     const q=sidebarFilter.toLowerCase();
@@ -217,9 +228,8 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
   const allModelNames=brand.categories.flatMap(c=>[...c.models.map(m=>m.name),...(c.subCategories||[]).flatMap(sc=>sc.models.map(m=>m.name))]);
   const isDuplicate=allModelNames.some(n=>n.toLowerCase()===newModName.trim().toLowerCase());
   const suggestions=newModName.trim().length>=1?allModelNames.filter(n=>n.toLowerCase().includes(newModName.toLowerCase())&&n.toLowerCase()!==newModName.toLowerCase()):[];
-
   const doAddMod=(cid,scid)=>{const n=newModName.trim();if(!n)return;onAddModel(cid,n,scid);setNewModName('');setAddingMod(null);};
-  const startAdd=(cid,scid)=>{setAddingMod(scid?cid+'__'+scid:cid);setNewModName('');setTimeout(()=>modRef.current&&modRef.current.focus(),50);};
+  const startAdd=(cid,scid)=>{setAddingMod(scid?cid+'__'+scid:cid);setNewModName('');setTimeout(()=>modRef.current?.focus(),50);};
 
   const renderAddBox=(cid,scid)=>{
     const key=scid?cid+'__'+scid:cid;
@@ -229,7 +239,8 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
         <div style={{display:'flex',gap:6}}>
           <input ref={modRef} value={newModName} onChange={e=>setNewModName(e.target.value)}
             onKeyDown={e=>{if(e.key==='Enter'&&!isDuplicate)doAddMod(cid,scid);if(e.key==='Escape'){setAddingMod(null);setNewModName('');}}}
-            placeholder="שם הדגם..." style={{flex:1,border:'1px solid '+(isDuplicate?'#e53935':'var(--border)'),borderRadius:4,padding:'5px 8px',fontSize:12,color:'var(--inp)',background:'var(--ibg)'}}/>
+            placeholder="שם הדגם..."
+            style={{flex:1,border:`1px solid ${isDuplicate?'#e53935':'var(--border)'}`,borderRadius:4,padding:'5px 8px',fontSize:12,color:'var(--inp)',background:'var(--ibg)'}}/>
           <button onClick={()=>{if(!isDuplicate)doAddMod(cid,scid);}} disabled={isDuplicate}
             style={{background:isDuplicate?'#aaa':brand.color,color:'#fff',border:'none',borderRadius:4,padding:'5px 10px',cursor:isDuplicate?'not-allowed':'pointer',fontSize:12}}>הוסף</button>
           <button onClick={()=>{setAddingMod(null);setNewModName('');}} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'5px 8px',cursor:'pointer',fontSize:12,color:'var(--text)'}}>✕</button>
@@ -252,21 +263,21 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
     return(
       <div key={m.id} style={{display:'flex',alignItems:'center',borderBottom:'1px solid var(--border)'}}>
         <div onClick={()=>onNav(brand.id,cid,m.id,scid)}
-          style={{flex:1,padding:'8px 10px 8px 26px',cursor:'pointer',fontSize:13,color:sel&&sel.mid===m.id?brand.color:'var(--text)',fontWeight:sel&&sel.mid===m.id?'bold':'normal',background:sel&&sel.mid===m.id?brand.light+'88':'transparent',borderRight:sel&&sel.mid===m.id?'3px solid '+brand.color:'3px solid transparent'}}>
+          style={{flex:1,padding:'8px 10px 8px 26px',cursor:'pointer',fontSize:13,color:sel?.mid===m.id?brand.color:'var(--text)',fontWeight:sel?.mid===m.id?'bold':'normal',background:sel?.mid===m.id?brand.light+'88':'transparent',borderRight:sel?.mid===m.id?`3px solid ${brand.color}`:'3px solid transparent'}}>
           {m.name}
-          {m.synonyms&&m.synonyms.length>0&&<div style={{fontSize:10,color:'var(--sub)',marginTop:2}}>{m.synonyms.join(' | ')}</div>}
+          {m.synonyms?.length>0&&<div style={{fontSize:10,color:'var(--sub)',marginTop:2}}>{m.synonyms.join(' | ')}</div>}
           {sidebarFilter&&(m.synonyms||[]).some(s=>s.toLowerCase().includes(sidebarFilter.toLowerCase()))&&!(m.name.toLowerCase().includes(sidebarFilter.toLowerCase()))&&(
-            <div style={{fontSize:10,color:'#7b1fa2',marginTop:2,fontWeight:'bold'}}>≡ {(m.synonyms||[]).filter(s=>s.toLowerCase().includes(sidebarFilter.toLowerCase())).join(', ')}</div>
+            <div style={{fontSize:10,color:'#7b1fa2',marginTop:2,fontWeight:'bold'}}>\u2261 {(m.synonyms||[]).filter(s=>s.toLowerCase().includes(sidebarFilter.toLowerCase())).join(', ')}</div>
           )}
         </div>
         {onToggleCompare&&(
           <button onClick={()=>onToggleCompare(brand.id,cid,m.id)} title={inCompare?'הסר מהשוואה':'הוסף להשוואה'}
             style={{background:'none',border:'none',fontSize:14,cursor:'pointer',padding:'0 3px',color:inCompare?'#e65100':'var(--sub)',fontWeight:'bold'}}>
-            {inCompare?'⊖':'⊕'}
+            {inCompare?'\u2296':'\u2295'}
           </button>
         )}
-        <button onClick={()=>onToggleFav(m.id)} style={{background:'none',border:'none',fontSize:13,cursor:'pointer',padding:'0 4px'}}>{favorites.has(m.id)?'⭐':'☆'}</button>
-        {admin&&<button onClick={()=>onDelModel(cid,m.id,scid)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:13,padding:'0 8px'}}>🗑</button>}
+        <button onClick={()=>onToggleFav(m.id)} style={{background:'none',border:'none',fontSize:13,cursor:'pointer',padding:'0 4px'}}>{favorites.has(m.id)?'\u2B50':'\u2606'}</button>
+        {admin&&<button onClick={()=>onDelModel(cid,m.id,scid)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:13,padding:'0 8px'}}>\uD83D\uDDD1</button>}
       </div>
     );
   };
@@ -275,7 +286,7 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
     <div style={{borderBottom:'1px solid var(--border)'}}>
       <div onClick={()=>setOpen(v=>!v)} style={{padding:'11px 14px',background:brand.color,color:'#fff',display:'flex',alignItems:'center',cursor:'pointer',userSelect:'none',gap:6}}>
         <span style={{flex:1,fontWeight:'bold',fontSize:14}}>{brand.name}</span>
-        <span style={{fontSize:11,opacity:.8}}>{open?'▲':'▼'}</span>
+        <span style={{fontSize:11,opacity:.8}}>{open?'\u25B2':'\u25BC'}</span>
       </div>
       {open&&<>
         {brand.categories.map(c=>{
@@ -287,33 +298,31 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
           if(sidebarFilter&&!visibleModels.length&&!visibleSubs.length)return null;
           return(
             <div key={c.id}>
-              {/* Category header */}
               <div style={{display:'flex',alignItems:'center',background:'var(--row2)',borderBottom:'1px solid var(--border)',minHeight:36}}>
-                {editCat&&editCat.id===c.id&&admin
+                {editCat?.id===c.id&&admin
                   ?<div style={{flex:1,display:'flex',gap:4,padding:'4px 8px'}}>
                      <input value={editCat.name} autoFocus onChange={e=>setEditCat({id:c.id,name:e.target.value})}
                        onKeyDown={e=>{if(e.key==='Enter'){onEditCat(c.id,editCat.name);setEditCat(null);}if(e.key==='Escape')setEditCat(null);}}
                        style={{flex:1,border:'1px solid var(--border)',borderRadius:4,padding:'3px 6px',fontSize:12,color:'var(--inp)',background:'var(--ibg)'}}/>
-                     <button onClick={()=>{onEditCat(c.id,editCat.name);setEditCat(null);}} style={{background:brand.color,color:'#fff',border:'none',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11}}>✓</button>
-                     <button onClick={()=>setEditCat(null)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'2px 6px',cursor:'pointer',fontSize:11,color:'var(--text)'}}>✕</button>
+                     <button onClick={()=>{onEditCat(c.id,editCat.name);setEditCat(null);}} style={{background:brand.color,color:'#fff',border:'none',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11}}>\u2713</button>
+                     <button onClick={()=>setEditCat(null)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'2px 6px',cursor:'pointer',fontSize:11,color:'var(--text)'}}>\u2715</button>
                    </div>
                   :<div onClick={()=>toggleCat(c.id)} style={{flex:1,padding:'8px 14px 8px 20px',cursor:'pointer',color:'var(--sub)',fontSize:13,userSelect:'none',display:'flex',alignItems:'center'}}>
-                     <span style={{flex:1,fontWeight:'600'}}>{c.name}</span><span style={{fontSize:10}}>{openCats[c.id]?'▲':'▼'}</span>
+                     <span style={{flex:1}}>{c.name}</span><span style={{fontSize:10}}>{openCats[c.id]?'\u25B2':'\u25BC'}</span>
                    </div>
                 }
-                {admin&&!(editCat&&editCat.id===c.id)&&(
+                {admin&&editCat?.id!==c.id&&(
                   <div style={{display:'flex',flexShrink:0,paddingLeft:4}}>
                     <button onClick={e=>{e.stopPropagation();startAdd(c.id,null);}} title="הוסף דגם" style={{background:'none',border:'none',color:brand.color,cursor:'pointer',fontSize:20,fontWeight:'bold',padding:'2px 6px',lineHeight:1}}>+</button>
-                    <button onClick={e=>{e.stopPropagation();setAddingSub(c.id);setNewSubName('');}} title="הוסף תת-קטגוריה" style={{background:'none',border:'none',color:'#7b1fa2',cursor:'pointer',fontSize:14,padding:'2px 4px'}}>📂</button>
-                    <button onClick={e=>{e.stopPropagation();setEditCat({id:c.id,name:c.name});}} style={{background:'none',border:'none',color:'var(--sub)',cursor:'pointer',fontSize:13,padding:'2px 4px'}}>✏</button>
-                    <button onClick={e=>{e.stopPropagation();onDelCat(c.id);}} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:13,padding:'2px 5px'}}>🗑</button>
+                    <button onClick={e=>{e.stopPropagation();setAddingSub(c.id);setNewSubName('');}} title="הוסף תת-קטגוריה" style={{background:'none',border:'none',color:'#7b1fa2',cursor:'pointer',fontSize:14,padding:'2px 4px'}}>\uD83D\uDCC2</button>
+                    <button onClick={e=>{e.stopPropagation();setEditCat({id:c.id,name:c.name});}} style={{background:'none',border:'none',color:'var(--sub)',cursor:'pointer',fontSize:13,padding:'2px 4px'}}>\u270F</button>
+                    <button onClick={e=>{e.stopPropagation();onDelCat(c.id);}} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:13,padding:'2px 5px'}}>\uD83D\uDDD1</button>
                   </div>
                 )}
-                {editor&&!admin&&!(editCat&&editCat.id===c.id)&&(
+                {editor&&!admin&&editCat?.id!==c.id&&(
                   <button onClick={e=>{e.stopPropagation();startAdd(c.id,null);}} style={{background:'none',border:'none',color:brand.color,cursor:'pointer',fontSize:20,fontWeight:'bold',padding:'2px 8px',lineHeight:1}}>+</button>
                 )}
               </div>
-              {/* Add sub-category input */}
               {admin&&addingSub===c.id&&(
                 <div style={{padding:'6px 10px',background:'#f3e5f5',display:'flex',gap:6,borderBottom:'1px solid var(--border)'}}>
                   <input value={newSubName} autoFocus onChange={e=>setNewSubName(e.target.value)}
@@ -321,40 +330,39 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
                     placeholder="שם תת-קטגוריה..."
                     style={{flex:1,border:'1px solid #ce93d8',borderRadius:4,padding:'5px 8px',fontSize:12,color:'var(--inp)',background:'var(--ibg)'}}/>
                   <button onClick={()=>{if(newSubName.trim()){onAddSubCat(c.id,newSubName.trim());setNewSubName('');setAddingSub(null);}}} style={{background:'#7b1fa2',color:'#fff',border:'none',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:12}}>הוסף</button>
-                  <button onClick={()=>setAddingSub(null)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'5px 8px',cursor:'pointer',fontSize:12,color:'var(--text)'}}>✕</button>
+                  <button onClick={()=>setAddingSub(null)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'5px 8px',cursor:'pointer',fontSize:12,color:'var(--text)'}}>\u2715</button>
                 </div>
               )}
               {(openCats[c.id]||sidebarFilter)&&<>
                 {renderAddBox(c.id,null)}
                 {visibleModels.map(m=>renderModelRow(m,c.id,null))}
                 {!visibleModels.length&&!sidebarFilter&&!subCats.length&&<div style={{padding:'7px 26px',color:'var(--sub)',fontSize:12}}>אין דגמים</div>}
-                {/* Sub-categories */}
                 {(sidebarFilter?visibleSubs:subCats).map(sc=>{
                   const scModels=sidebarFilter?sc.models.filter(mm):sc.models;
                   if(sidebarFilter&&!scModels.length)return null;
                   return(
                     <div key={sc.id}>
                       <div style={{display:'flex',alignItems:'center',background:'#f3e5f511',borderBottom:'1px solid var(--border)',minHeight:32,paddingRight:12}}>
-                        {editSub&&editSub.id===sc.id&&admin
+                        {editSub?.id===sc.id&&admin
                           ?<div style={{flex:1,display:'flex',gap:4,padding:'4px 8px'}}>
                              <input value={editSub.name} autoFocus onChange={e=>setEditSub({id:sc.id,name:e.target.value})}
                                onKeyDown={e=>{if(e.key==='Enter'){onEditSubCat(c.id,sc.id,editSub.name);setEditSub(null);}if(e.key==='Escape')setEditSub(null);}}
                                style={{flex:1,border:'1px solid #ce93d8',borderRadius:4,padding:'3px 6px',fontSize:11,color:'var(--inp)',background:'var(--ibg)'}}/>
-                             <button onClick={()=>{onEditSubCat(c.id,sc.id,editSub.name);setEditSub(null);}} style={{background:'#7b1fa2',color:'#fff',border:'none',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11}}>✓</button>
-                             <button onClick={()=>setEditSub(null)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'2px 6px',cursor:'pointer',fontSize:11,color:'var(--text)'}}>✕</button>
+                             <button onClick={()=>{onEditSubCat(c.id,sc.id,editSub.name);setEditSub(null);}} style={{background:'#7b1fa2',color:'#fff',border:'none',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11}}>\u2713</button>
+                             <button onClick={()=>setEditSub(null)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'2px 6px',cursor:'pointer',fontSize:11,color:'var(--text)'}}>\u2715</button>
                            </div>
                           :<div onClick={()=>toggleSub(sc.id)} style={{flex:1,padding:'6px 8px 6px 20px',cursor:'pointer',color:'#7b1fa2',fontSize:12,userSelect:'none',display:'flex',alignItems:'center',gap:4}}>
-                             <span>📂</span><span style={{flex:1,fontWeight:'600'}}>{sc.name}</span><span style={{fontSize:10}}>{openSubs[sc.id]?'▲':'▼'}</span>
+                             <span>\uD83D\uDCC2</span><span style={{flex:1,fontWeight:'600'}}>{sc.name}</span><span style={{fontSize:10}}>{openSubs[sc.id]?'\u25B2':'\u25BC'}</span>
                            </div>
                         }
-                        {admin&&!(editSub&&editSub.id===sc.id)&&(
+                        {admin&&editSub?.id!==sc.id&&(
                           <div style={{display:'flex',flexShrink:0,paddingLeft:4}}>
                             <button onClick={e=>{e.stopPropagation();startAdd(c.id,sc.id);}} style={{background:'none',border:'none',color:brand.color,cursor:'pointer',fontSize:18,fontWeight:'bold',padding:'2px 5px',lineHeight:1}}>+</button>
-                            <button onClick={e=>{e.stopPropagation();setEditSub({id:sc.id,name:sc.name});}} style={{background:'none',border:'none',color:'var(--sub)',cursor:'pointer',fontSize:12,padding:'2px 4px'}}>✏</button>
-                            <button onClick={e=>{e.stopPropagation();onDelSubCat(c.id,sc.id);}} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:12,padding:'2px 5px'}}>🗑</button>
+                            <button onClick={e=>{e.stopPropagation();setEditSub({id:sc.id,name:sc.name});}} style={{background:'none',border:'none',color:'var(--sub)',cursor:'pointer',fontSize:12,padding:'2px 4px'}}>\u270F</button>
+                            <button onClick={e=>{e.stopPropagation();onDelSubCat(c.id,sc.id);}} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:12,padding:'2px 5px'}}>\uD83D\uDDD1</button>
                           </div>
                         )}
-                        {editor&&!admin&&!(editSub&&editSub.id===sc.id)&&(
+                        {editor&&!admin&&editSub?.id!==sc.id&&(
                           <button onClick={e=>{e.stopPropagation();startAdd(c.id,sc.id);}} style={{background:'none',border:'none',color:brand.color,cursor:'pointer',fontSize:18,fontWeight:'bold',padding:'2px 8px',lineHeight:1}}>+</button>
                         )}
                       </div>
@@ -376,7 +384,7 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
                onKeyDown={e=>{if(e.key==='Enter'&&newCatName.trim()){onAddCat(newCatName.trim());setNewCatName('');setAddingCat(false);}if(e.key==='Escape')setAddingCat(false);}}
                placeholder="שם קטגוריה..." style={{flex:1,border:'1px solid var(--border)',borderRadius:4,padding:'5px 8px',fontSize:12,color:'var(--inp)',background:'var(--ibg)'}}/>
              <button onClick={()=>{if(newCatName.trim()){onAddCat(newCatName.trim());setNewCatName('');setAddingCat(false);}}} style={{background:brand.color,color:'#fff',border:'none',borderRadius:4,padding:'5px 10px',cursor:'pointer',fontSize:12}}>הוסף</button>
-             <button onClick={()=>setAddingCat(false)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'5px 8px',cursor:'pointer',fontSize:12,color:'var(--text)'}}>✕</button>
+             <button onClick={()=>setAddingCat(false)} style={{background:'var(--border)',border:'none',borderRadius:4,padding:'5px 8px',cursor:'pointer',fontSize:12,color:'var(--text)'}}>\u2715</button>
            </div>
           :<button onClick={()=>setAddingCat(true)} style={{width:'100%',padding:'8px',background:'none',border:'none',borderTop:'1px dashed var(--border)',color:brand.color,cursor:'pointer',fontSize:12,fontWeight:'bold'}}>+ הוסף קטגוריה</button>
         )}
@@ -385,114 +393,13 @@ function SidebarBrand({brand,sel,editor,admin,favorites,onToggleFav,onNav,onAddM
   );
 }
 
-// ══════════ COMPARE PANEL ══════════
-function ComparePanel({compareList,data,onClose,onRemove}){
-  if(!compareList||compareList.length===0)return null;
-  const models=compareList.map(function(x){
-    var bid=x.bid,cid=x.cid,mid=x.mid;
-    var b=data.brands.find(function(x){return x.id===bid;});
-    var c=b&&b.categories.find(function(x){return x.id===cid;});
-    var m=c&&c.models.find(function(x){return x.id===mid;});
-    return m?{b,c,m}:null;
-  }).filter(Boolean);
-
-  const allColIds=[];const colNameMap={};
-  models.forEach(function(x){x.m.columns.forEach(function(col){if(!allColIds.includes(col.id)){allColIds.push(col.id);colNameMap[col.id]=col.name;}});});
-
-  const hStyle={padding:'10px 12px',fontWeight:'bold',fontSize:12,background:'var(--row2)',borderBottom:'2px solid var(--border)',textAlign:'center',minWidth:150};
-  const cStyle={padding:'7px 10px',fontSize:12,borderBottom:'1px solid var(--border)',verticalAlign:'top'};
-  const rStyle={padding:'7px 10px',fontSize:12,fontWeight:'bold',color:'var(--sub)',borderBottom:'1px solid var(--border)',background:'var(--row2)',whiteSpace:'nowrap'};
-
-  return(
-    <Modal onClose={onClose} wide title="⚖️ השוואת דגמים">
-      <div style={{marginBottom:12,display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
-        <span style={{fontSize:12,color:'var(--sub)'}}>דגמים נבחרים:</span>
-        {models.map(function(x){var b=x.b,m=x.m;return(
-          <div key={m.id} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:20,background:b.color+'22',border:'1px solid '+b.color+'55',fontSize:12}}>
-            <span style={{background:b.color,color:'#fff',padding:'1px 7px',borderRadius:10,fontSize:11,fontWeight:'bold'}}>{b.name}</span>
-            <span style={{fontWeight:'bold',color:'var(--text)'}}>{m.name}</span>
-            <button onClick={()=>onRemove(m.id)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:14,padding:0,lineHeight:1}}>✕</button>
-          </div>
-        );})}
-        {compareList.length<3&&<span style={{fontSize:11,color:'var(--sub)',background:'var(--row2)',padding:'3px 8px',borderRadius:8}}>ניתן להוסיף עוד {3-compareList.length} דגמים</span>}
-      </div>
-      {models.length<2?(
-        <div style={{textAlign:'center',padding:40,color:'var(--sub)',fontSize:14}}>
-          <div style={{fontSize:40,marginBottom:10}}>⚖️</div>
-          <div style={{fontWeight:'bold',marginBottom:6}}>בחר לפחות 2 דגמים להשוואה</div>
-          <div style={{fontSize:12}}>לחץ על ⊕ בסרגל לצד שם הדגם כדי להוסיפו להשוואה</div>
-        </div>
-      ):(
-        <div style={{overflowX:'auto',maxHeight:'65vh',overflowY:'auto',borderRadius:8,border:'1px solid var(--border)'}}>
-          <table style={{borderCollapse:'collapse',width:'100%',direction:'rtl'}}>
-            <thead style={{position:'sticky',top:0,zIndex:2}}>
-              <tr>
-                <th style={{...hStyle,textAlign:'right',background:'var(--card)',minWidth:100}}>שדה</th>
-                {models.map(function(x){var b=x.b,m=x.m;return(
-                  <th key={m.id} style={{...hStyle,borderRight:'3px solid '+b.color,background:b.color+'18'}}>
-                    <div style={{color:b.color,fontSize:10,marginBottom:2}}>{b.name}</div>
-                    <div style={{color:'var(--text)',fontSize:13}}>{m.name}</div>
-                    <div style={{color:'var(--sub)',fontSize:10}}>{m.parts.length} חלקים</div>
-                  </th>
-                );})}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={rStyle}>קטגוריה</td>
-                {models.map(function(x){return <td key={x.m.id} style={cStyle}>{x.c.name}</td>;})}
-              </tr>
-              <tr style={{background:'var(--row2)'}}>
-                <td style={rStyle}>מספר חלקים</td>
-                {models.map(function(x){var b=x.b,m=x.m;return <td key={m.id} style={{...cStyle,color:b.color,fontWeight:'bold'}}>{m.parts.length}</td>;})}
-              </tr>
-              {allColIds.map(function(colId,ri){
-                var vals=models.map(function(x){
-                  var col=x.m.columns.find(function(c){return c.id===colId;});
-                  if(!col)return[];
-                  return x.m.parts.map(function(p){return(p.values[colId]||'').trim();}).filter(Boolean);
-                });
-                if(!vals.some(function(v){return v.length>0;}))return null;
-                var allFlat=vals.reduce(function(a,b){return a.concat(b);},[]);
-                var unique=allFlat.filter(function(v,i,a){return a.indexOf(v)===i;});
-                var isDiff=unique.length>1;
-                return(
-                  <tr key={colId} style={{background:ri%2===0?'var(--row1)':'var(--row2)'}}>
-                    <td style={{...rStyle,color:isDiff?'#e65100':'var(--sub)'}}>
-                      {colNameMap[colId]}
-                      {isDiff&&<span style={{marginRight:6,fontSize:9,background:'#e65100',color:'#fff',borderRadius:4,padding:'1px 5px'}}>שונה</span>}
-                    </td>
-                    {models.map(function(x){
-                      var col=x.m.columns.find(function(c){return c.id===colId;});
-                      var pv=col?x.m.parts.map(function(p){return(p.values[colId]||'').trim();}).filter(Boolean):[];
-                      return(
-                        <td key={x.m.id} style={{...cStyle,background:isDiff?'#fff8e133':''}}>
-                          {pv.length===0
-                            ?<span style={{color:'var(--sub)',fontSize:11}}>—</span>
-                            :pv.slice(0,5).map(function(v,i){return <div key={i} style={{fontSize:12,color:'var(--text)',padding:'1px 0'}}>{v}</div>;})
-                          }
-                          {pv.length>5&&<div style={{fontSize:10,color:'var(--sub)'}}>ועוד {pv.length-5}...</div>}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <button onClick={onClose} style={{width:'100%',marginTop:14,...BST}}>סגור</button>
-    </Modal>
-  );
-}
 
 // ══════════ CART PANEL ══════════
 function CartPanel({cart,data,onRemove,onClear,onClose,waDefaults}){
   const[colSel,setColSel]=useState(new Set(waDefaults));
   const allCols=useMemo(()=>{const s=new Set();cart.forEach(i=>i.columns.forEach(c=>s.add(JSON.stringify({id:c.id,name:c.name}))));return[...s].map(x=>JSON.parse(x));},[cart]);
-  const exportCartPDF=()=>{const w=window.open('','_blank');const rows=cart.map(i=>'<tr><td style="background:#f5f5f5;font-weight:bold">'+i.modelName+'<br><small>'+i.brandName+'·'+i.catName+'</small></td>'+i.columns.map(c=>'<td>'+(i.values[c.id]||'')+'</td>').join('')+'</tr>').join('');w.document.write('<html dir="rtl"><head><meta charset="UTF-8"><title>סל חלקים</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{border-collapse:collapse;width:100%}th{background:#1565c0;color:#fff;padding:8px 10px;text-align:right}td{border:1px solid #ddd;padding:6px 10px;font-size:13px}</style></head><body><h2 style="color:#1565c0">🛒 סל חלקים — '+new Date().toLocaleDateString('he-IL')+'</h2><p>'+cart.length+' פריטים</p><table><thead><tr><th>דגם</th>'+(cart[0]?cart[0].columns.map(c=>'<th>'+c.name+'</th>').join(''):'')+'</tr></thead><tbody>'+rows+'</tbody></table><script>window.onload=function(){window.print();}<\/script></body></html>');w.document.close();};
-  const sendCartWA=()=>{const activeCols=allCols.filter(c=>colSel.has(c.id));const hdr='🛒 *סל חלקים*\n'+new Date().toLocaleDateString('he-IL')+'\n'+'─'.repeat(28);const lines=cart.map((item,i)=>{const vals=activeCols.map(c=>{const v=(item.values[c.id]||'').trim();return v?c.name+': '+v:'';}).filter(Boolean);return'*'+(i+1)+'.* ['+item.modelName+'] '+vals.join(' | ');}).join('\n');window.open('https://wa.me/?text='+encodeURIComponent(hdr+'\n\n'+lines+'\n\n_סה"כ '+cart.length+' פריטים_'),'_blank');};
+  const exportCartPDF=()=>{const w=window.open('','_blank');const rows=cart.map(i=>`<tr><td style="background:#f5f5f5;font-weight:bold">${i.modelName}<br><small>${i.brandName}·${i.catName}</small></td>${i.columns.map(c=>`<td>${i.values[c.id]||''}</td>`).join('')}</tr>`).join('');w.document.write(`<html dir="rtl"><head><meta charset="UTF-8"><title>סל חלקים</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{border-collapse:collapse;width:100%}th{background:#1565c0;color:#fff;padding:8px 10px;text-align:right}td{border:1px solid #ddd;padding:6px 10px;font-size:13px}</style></head><body><h2 style="color:#1565c0">🛒 סל חלקים — ${new Date().toLocaleDateString('he-IL')}</h2><p>${cart.length} פריטים</p><table><thead><tr><th>דגם</th>${cart[0]?.columns.map(c=>`<th>${c.name}</th>`).join('')||''}</tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print();<\/script></body></html>`);w.document.close();};
+  const sendCartWA=()=>{const activeCols=allCols.filter(c=>colSel.has(c.id));const hdr=`🛒 *סל חלקים*\n${new Date().toLocaleDateString('he-IL')}\n${'─'.repeat(28)}`;const lines=cart.map((item,i)=>{const vals=activeCols.map(c=>{const v=(item.values[c.id]||'').trim();return v?`${c.name}: ${v}`:'';}).filter(Boolean);return`*${i+1}.* [${item.modelName}] ${vals.join(' | ')}`;}).join('\n');window.open('https://wa.me/?text='+encodeURIComponent(`${hdr}\n\n${lines}\n\n_סה"כ ${cart.length} פריטים_`),'_blank');};
   return(
     <Modal onClose={onClose} wide title="🛒 סל חלקים">
       {!cart.length?<div style={{textAlign:'center',padding:40,color:'var(--sub)'}}>הסל ריק</div>
@@ -505,7 +412,7 @@ function CartPanel({cart,data,onRemove,onClear,onClose,waDefaults}){
                     <span style={{background:item.brandColor,color:'#fff',padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:'bold'}}>{item.brandName}</span>
                     <span style={{fontWeight:'bold',fontSize:13,color:'var(--text)'}}>{item.modelName}</span>
                   </div>
-                  <div style={{fontSize:12,color:'var(--sub)'}}>{item.columns.filter(c=>item.values[c.id]&&item.values[c.id].trim()).map(c=>c.name+': '+item.values[c.id]).join(' · ')}</div>
+                  <div style={{fontSize:12,color:'var(--sub)'}}>{item.columns.filter(c=>item.values[c.id]?.trim()).map(c=>`${c.name}: ${item.values[c.id]}`).join(' · ')}</div>
                 </div>
                 <button onClick={()=>onRemove(item.id)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:16,flexShrink:0}}>🗑</button>
               </div>
@@ -516,7 +423,7 @@ function CartPanel({cart,data,onRemove,onClear,onClose,waDefaults}){
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
               {allCols.map(c=>{const on=colSel.has(c.id);return(
                 <div key={c.id} onClick={()=>setColSel(p=>{const n=new Set(p);on?n.delete(c.id):n.add(c.id);return n;})}
-                  style={{padding:'5px 10px',borderRadius:6,border:'2px solid '+(on?'#1565c0':'var(--border)'),background:on?'#e3f2fd':'var(--ibg)',cursor:'pointer',fontSize:12,color:'var(--text)',userSelect:'none'}}>
+                  style={{padding:'5px 10px',borderRadius:6,border:`2px solid ${on?'#1565c0':'var(--border)'}`,background:on?'#e3f2fd':'var(--ibg)',cursor:'pointer',fontSize:12,color:'var(--text)',userSelect:'none'}}>
                   {on?'✓ ':''}{c.name}
                 </div>
               );})}
@@ -534,7 +441,9 @@ function CartPanel({cart,data,onRemove,onClear,onClose,waDefaults}){
 }
 
 // ══════════ NOTIFICATIONS PANEL ══════════
-function NotificationsPanel({missingAlerts,reports,techRequests,alerts,data,onNav,onResolve,onResolveTech,onClose,initialTab,onResolveAllReports,onResolveAllTech,onClearAlerts}){
+function NotificationsPanel({missingAlerts,reports,techRequests,alerts,data,onNav,onResolve,onResolveTech,onClose,initialTab,
+  onResolveAllReports,onResolveAllTech,onClearAlerts}){
+  // Duplicate model names detection
   const duplicateNames=useMemo(()=>{
     if(!data)return[];
     const nameMap={};
@@ -545,27 +454,33 @@ function NotificationsPanel({missingAlerts,reports,techRequests,alerts,data,onNa
     })));
     return Object.values(nameMap).filter(arr=>arr.length>1);
   },[data]);
-  const[dismissed,setDismissed]=useState(()=>{try{return new Set(JSON.parse(localStorage.getItem('ac_dismissed_missing')||'[]'));}catch{return new Set();}});
+  const[dismissed,setDismissed]=useState(()=>{
+    try{return new Set(JSON.parse(localStorage.getItem('ac_dismissed_missing')||'[]'));}catch{return new Set();}
+  });
   const dismissAlert=key=>{setDismissed(p=>{const n=new Set(p);n.add(key);try{localStorage.setItem('ac_dismissed_missing',JSON.stringify([...n]));}catch{}return n;});};
   const restoreAll=()=>{setDismissed(new Set());try{localStorage.removeItem('ac_dismissed_missing');}catch{}};
-  const activeMissing=missingAlerts.filter(a=>{const key=a.m.id+'__'+a.p.id;return!dismissed.has(key);});
+
+  const activeMissing=missingAlerts.filter(a=>{const key=`${a.m.id}__${a.p.id}`;return!dismissed.has(key);});
   const dismissedCount=missingAlerts.length-activeMissing.length;
   const unresolved=reports.filter(r=>!r.resolved);
   const unresolvedTech=techRequests.filter(r=>!r.resolved);
+
   const[tab,setTab]=useState(initialTab||'missing');
   const tabs=[
-    ['missing','⚠️ שדות חסרים ('+activeMissing.length+(dismissedCount>0?' / '+missingAlerts.length:'')+')'],
-    ['reports','🔴 שגיאות ('+unresolved.length+')'],
-    ['tech','💬 בקשות ('+unresolvedTech.length+')'],
-    ['activity','📋 פעולות ('+alerts.length+')'],
-    ...(duplicateNames.length?[['dupes','🔁 כפולים ('+duplicateNames.length+')']]:[]),
+    ['missing',`⚠️ שדות חסרים (${activeMissing.length}${dismissedCount>0?` / ${missingAlerts.length}` :''})`],
+    ['reports',`🔴 שגיאות (${unresolved.length})`],
+    ['tech',`💬 בקשות (${unresolvedTech.length})`],
+    ['activity',`📋 פעולות (${alerts.length})`],
+    ...(duplicateNames.length?[['dupes',`🔁 כפולים (${duplicateNames.length})`]]:[]),
   ];
+
   const resetCurrentTab=async()=>{
     if(tab==='reports'){if(!confirm('לסמן כל הדיווחים כטופלו?'))return;await onResolveAllReports();alert('✅ כל הדיווחים סומנו כטופלו');}
     else if(tab==='tech'){if(!confirm('לסמן כל הבקשות כטופלו?'))return;await onResolveAllTech();alert('✅ כל הבקשות סומנו כטופלו');}
     else if(tab==='activity'){if(!confirm('למחוק את כל הפעולות?'))return;await onClearAlerts();alert('✅ הפעולות נמחקו');}
-    else if(tab==='missing'){if(!confirm('לסמן את כל שדות חסרים כטופלו?'))return;missingAlerts.forEach(a=>dismissAlert(a.m.id+'__'+a.p.id));alert('✅ כל השדות סומנו כטופלו');}
+    else if(tab==='missing'){if(!confirm('לסמן את כל שדות חסרים כטופלו?'))return;missingAlerts.forEach(a=>dismissAlert(`${a.m.id}__${a.p.id}`));alert('✅ כל השדות סומנו כטופלו');}
   };
+
   return(
     <Modal onClose={onClose} wide title="🔔 התראות ומשימות">
       <div style={{display:'flex',gap:4,marginBottom:10,flexWrap:'wrap'}}>
@@ -576,43 +491,92 @@ function NotificationsPanel({missingAlerts,reports,techRequests,alerts,data,onNa
       <div style={{display:'flex',justifyContent:'flex-end',marginBottom:12}}>
         <button onClick={resetCurrentTab} style={sB('#e53935')}>🔄 איפוס טאב זה</button>
       </div>
+
       {tab==='missing'&&(
         <div style={{maxHeight:'55vh',overflowY:'auto'}}>
-          {dismissedCount>0&&(<div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'8px 12px',background:'#e8f5e9',borderRadius:8,border:'1px solid #c8e6c9'}}><span style={{fontSize:12,color:'#2e7d32',flex:1}}>✅ {dismissedCount} שדות סומנו כטופלו ומוסתרים</span><button onClick={restoreAll} style={sB('#78909c')}>הצג הכל</button></div>)}
-          {!activeMissing.length&&<div style={{textAlign:'center',color:'#4caf50',padding:30,fontSize:14}}>✅ {missingAlerts.length===0?'אין שדות חסרים!':'כל השדות החסרים טופלו!'}</div>}
-          {activeMissing.slice(0,60).map((a,i)=>{const key=a.m.id+'__'+a.p.id;return(
-            <div key={i} style={{display:'flex',gap:8,padding:'10px 12px',borderRadius:8,border:'1px solid #ff980022',background:'#fff8e1',marginBottom:6,alignItems:'center'}}>
-              <span style={{background:a.b.color,color:'#fff',padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:'bold',flexShrink:0}}>{a.b.name}</span>
-              <div style={{flex:1,cursor:'pointer'}} onClick={()=>onNav(a.b.id,a.c.id,a.m.id)}><div style={{fontWeight:'bold',fontSize:12,color:'#333'}}>{a.m.name}</div><div style={{fontSize:11,color:'#795548'}}>חלק: {a.p.values.nameHe||a.p.id} · חסר: {a.field}</div></div>
-              <button onClick={()=>onNav(a.b.id,a.c.id,a.m.id)} style={sB('#1565c0')}>→ פתח</button>
-              <button onClick={()=>dismissAlert(key)} style={sB('#4caf50')}>✓ טופל</button>
+          {dismissedCount>0&&(
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,padding:'8px 12px',background:'#e8f5e9',borderRadius:8,border:'1px solid #c8e6c9'}}>
+              <span style={{fontSize:12,color:'#2e7d32',flex:1}}>✅ {dismissedCount} שדות סומנו כטופלו ומוסתרים</span>
+              <button onClick={restoreAll} style={sB('#78909c')}>הצג הכל</button>
             </div>
-          );})}
+          )}
+          {!activeMissing.length&&<div style={{textAlign:'center',color:'#4caf50',padding:30,fontSize:14}}>✅ {missingAlerts.length===0?'אין שדות חסרים!':'כל השדות החסרים טופלו!'}</div>}
+          {activeMissing.slice(0,60).map((a,i)=>{
+            const key=`${a.m.id}__${a.p.id}`;
+            return(
+              <div key={i} style={{display:'flex',gap:8,padding:'10px 12px',borderRadius:8,border:'1px solid #ff980022',background:'#fff8e1',marginBottom:6,alignItems:'center'}}>
+                <span style={{background:a.b.color,color:'#fff',padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:'bold',flexShrink:0}}>{a.b.name}</span>
+                <div style={{flex:1,cursor:'pointer'}} onClick={()=>onNav(a.b.id,a.c.id,a.m.id)}>
+                  <div style={{fontWeight:'bold',fontSize:12,color:'#333'}}>{a.m.name}</div>
+                  <div style={{fontSize:11,color:'#795548'}}>חלק: {a.p.values.nameHe||a.p.id} · חסר: {a.field}</div>
+                </div>
+                <button onClick={()=>onNav(a.b.id,a.c.id,a.m.id)} style={sB('#1565c0')}>→ פתח</button>
+                <button onClick={()=>dismissAlert(key)} style={sB('#4caf50')}>✓ טופל</button>
+              </div>
+            );
+          })}
           {activeMissing.length>60&&<div style={{textAlign:'center',color:'var(--sub)',fontSize:12,padding:8}}>ועוד {activeMissing.length-60} פריטים...</div>}
         </div>
       )}
       {tab==='reports'&&(
         <div style={{maxHeight:'55vh',overflowY:'auto'}}>
           {!unresolved.length&&<div style={{textAlign:'center',color:'#4caf50',padding:30,fontSize:14}}>✅ אין דיווחים פתוחים!</div>}
-          {reports.map(r=>(<div key={r.id} style={{padding:'12px',borderRadius:8,border:'1px solid '+(r.resolved?'var(--border)':'#ff980055'),background:r.resolved?'var(--row2)':'#fff8e1',marginBottom:8,opacity:r.resolved?.6:1}}><div style={{display:'flex',gap:8,alignItems:'flex-start'}}><div style={{flex:1}}><div style={{fontWeight:'bold',fontSize:12,color:'var(--text)',marginBottom:4}}>{r.modelName||'?'} ({r.brandName||''})</div><div style={{fontSize:13,color:'var(--text)',marginBottom:4,lineHeight:1.5}}>{r.text}</div><div style={{fontSize:10,color:'var(--sub)'}}>{r.ts} · {r.role||'?'}</div></div><div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}><button onClick={()=>onNav(r.bid,r.cid,r.mid)} style={sB('#1565c0')}>→ פתח</button>{!r.resolved&&<button onClick={()=>onResolve(r.id)} style={sB('#4caf50')}>✓ טופל</button>}</div></div></div>))}
+          {reports.map(r=>(
+            <div key={r.id} style={{padding:'12px',borderRadius:8,border:`1px solid ${r.resolved?'var(--border)':'#ff980055'}`,background:r.resolved?'var(--row2)':'#fff8e1',marginBottom:8,opacity:r.resolved?.6:1}}>
+              <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+                <div style={{flex:1}}><div style={{fontWeight:'bold',fontSize:12,color:'var(--text)',marginBottom:4}}>{r.modelName||'?'} ({r.brandName||''})</div><div style={{fontSize:13,color:'var(--text)',marginBottom:4,lineHeight:1.5}}>{r.text}</div><div style={{fontSize:10,color:'var(--sub)'}}>{r.ts} · {r.role||'?'}</div></div>
+                <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+                  <button onClick={()=>onNav(r.bid,r.cid,r.mid)} style={sB('#1565c0')}>→ פתח</button>
+                  {!r.resolved&&<button onClick={()=>onResolve(r.id)} style={sB('#4caf50')}>✓ טופל</button>}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {tab==='tech'&&(
         <div style={{maxHeight:'55vh',overflowY:'auto'}}>
           {!unresolvedTech.length&&<div style={{textAlign:'center',color:'#4caf50',padding:30,fontSize:14}}>✅ אין בקשות פתוחות!</div>}
-          {techRequests.map(r=>(<div key={r.id} style={{padding:'12px',borderRadius:8,border:'1px solid '+(r.resolved?'var(--border)':'#1565c055'),background:r.resolved?'var(--row2)':'#e3f2fd',marginBottom:8,opacity:r.resolved?.6:1}}><div style={{display:'flex',gap:8,alignItems:'flex-start'}}><div style={{flex:1}}><div style={{fontWeight:'bold',fontSize:13,color:'var(--text)',marginBottom:4}}>{r.text}</div><div style={{fontSize:11,color:'var(--sub)'}}>{r.ts} · {r.submittedBy||'?'}</div></div>{!r.resolved&&<button onClick={()=>onResolveTech(r.id)} style={sB('#4caf50')}>✓ טופל</button>}</div></div>))}
+          {techRequests.map(r=>(
+            <div key={r.id} style={{padding:'12px',borderRadius:8,border:`1px solid ${r.resolved?'var(--border)':'#1565c055'}`,background:r.resolved?'var(--row2)':'#e3f2fd',marginBottom:8,opacity:r.resolved?.6:1}}>
+              <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+                <div style={{flex:1}}><div style={{fontWeight:'bold',fontSize:13,color:'var(--text)',marginBottom:4}}>{r.text}</div><div style={{fontSize:11,color:'var(--sub)'}}>{r.ts} · {r.submittedBy||'?'}</div></div>
+                {!r.resolved&&<button onClick={()=>onResolveTech(r.id)} style={sB('#4caf50')}>✓ טופל</button>}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {tab==='activity'&&(
         <div style={{maxHeight:'55vh',overflowY:'auto'}}>
           {!alerts.length&&<div style={{textAlign:'center',color:'var(--sub)',padding:30}}>אין פעולות עדיין</div>}
-          {alerts.map((a,i)=>(<div key={a.id||i} style={{display:'flex',gap:10,padding:'9px 12px',borderRadius:8,background:a.type==='delete'?'#ffebee':'#e8f5e9',marginBottom:6,alignItems:'center'}}><span style={{fontSize:16,flexShrink:0}}>{a.type==='delete'?'🗑':'➕'}</span><div style={{flex:1}}><div style={{fontSize:13,color:'var(--text)',fontWeight:'500'}}>{a.text}</div><div style={{fontSize:11,color:'var(--sub)'}}>{a.ts} · {a.actor||'?'}</div></div></div>))}
+          {alerts.map((a,i)=>(
+            <div key={a.id||i} style={{display:'flex',gap:10,padding:'9px 12px',borderRadius:8,background:a.type==='delete'?'#ffebee':'#e8f5e9',marginBottom:6,alignItems:'center'}}>
+              <span style={{fontSize:16,flexShrink:0}}>{a.type==='delete'?'🗑':'➕'}</span>
+              <div style={{flex:1}}><div style={{fontSize:13,color:'var(--text)',fontWeight:'500'}}>{a.text}</div><div style={{fontSize:11,color:'var(--sub)'}}>{a.ts} · {a.actor||'?'}</div></div>
+            </div>
+          ))}
         </div>
       )}
       {tab==='dupes'&&(
         <div style={{maxHeight:'55vh',overflowY:'auto'}}>
           {!duplicateNames.length&&<div style={{textAlign:'center',color:'#4caf50',padding:30,fontSize:14}}>✅ אין דגמים עם שם זהה!</div>}
-          {duplicateNames.map((group,gi)=>(<div key={gi} style={{padding:'12px',borderRadius:8,border:'1px solid #ff980055',background:'#fff8e1',marginBottom:8}}><div style={{fontWeight:'bold',fontSize:13,color:'#e65100',marginBottom:8}}>🔁 "{group[0].m.name}" — {group.length} דגמים עם שם זהה</div>{group.map(({b,c,m},i)=>(<div key={i} onClick={()=>onNav(b.id,c.id,m.id)} style={{display:'flex',gap:8,alignItems:'center',padding:'6px 10px',borderRadius:6,background:'var(--card)',marginBottom:4,cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.background='var(--row2)'} onMouseLeave={e=>e.currentTarget.style.background='var(--card)'}><span style={{background:b.color,color:'#fff',padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:'bold'}}>{b.name}</span><span style={{fontSize:12,color:'var(--sub)'}}>{c.name}</span><span style={{fontSize:11,color:'#1565c0',fontWeight:'bold'}}>{m.parts.length} חלקים</span><span style={{marginRight:'auto',color:'#e65100',fontSize:11}}>→ לחץ לפתיחה</span></div>))}</div>))}
+          {duplicateNames.map((group,gi)=>(
+            <div key={gi} style={{padding:'12px',borderRadius:8,border:'1px solid #ff980055',background:'#fff8e1',marginBottom:8}}>
+              <div style={{fontWeight:'bold',fontSize:13,color:'#e65100',marginBottom:8}}>🔁 "{group[0].m.name}" — {group.length} דגמים עם שם זהה</div>
+              {group.map(({b,c,m},i)=>(
+                <div key={i} onClick={()=>onNav(b.id,c.id,m.id)}
+                  style={{display:'flex',gap:8,alignItems:'center',padding:'6px 10px',borderRadius:6,background:'var(--card)',marginBottom:4,cursor:'pointer'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='var(--row2)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='var(--card)'}>
+                  <span style={{background:b.color,color:'#fff',padding:'2px 7px',borderRadius:4,fontSize:10,fontWeight:'bold'}}>{b.name}</span>
+                  <span style={{fontSize:12,color:'var(--sub)'}}>{c.name}</span>
+                  <span style={{fontSize:11,color:'#1565c0',fontWeight:'bold'}}>{m.parts.length} חלקים</span>
+                  <span style={{marginRight:'auto',color:'#e65100',fontSize:11}}>→ לחץ לפתיחה</span>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       )}
       <button onClick={onClose} style={{width:'100%',marginTop:14,...BST}}>סגור</button>
