@@ -15,6 +15,8 @@ function App() {
   const [cart,           setCart]           = useState([]);
   const [showCart,       setShowCart]       = useState(false);
   const [showNotif,      setShowNotif]      = useState(false);
+  const [showMakatReview,setShowMakatReview]= useState(false);
+  const [makatApprovals, setMakatApprovals] = useState(()=>{try{return JSON.parse(localStorage.getItem('makat_approvals')||'{}');}catch{return{};}});
   const [notifInitTab,   setNotifInitTab]   = useState('missing');
   const [reports,        setReports]        = useState([]);
   const [techRequests,   setTechRequests]   = useState([]);
@@ -412,6 +414,13 @@ function App() {
             </button>
           )}
 
+          {/* Makat review — admin only */}
+          {admin&&(
+            <button onClick={()=>setShowMakatReview(true)} title="בדיקת מקטים" style={{...bB('rgba(255,255,255,.18)'),position:'relative'}}>
+              ✅
+            </button>
+          )}
+
           <button onClick={toggleDark} style={bB('rgba(255,255,255,.18)')}>{dark?'☀️':'🌙'}</button>
           {/* Editor extras */}
           {editor&&!admin&&<button onClick={()=>setShowNewsEditor(true)} style={bB('#00897b')}>📰</button>}
@@ -645,6 +654,10 @@ function App() {
       {/* PANELS */}
       {showCart     &&<CartPanel cart={cart} data={data} onRemove={removeFromCart} onClear={clearCart} onClose={()=>setShowCart(false)} waDefaults={data.waDefaults||['nameHe','tadPn']}/>}
       {showCompare  &&<ComparePanel compareList={compareList} data={data} onClose={()=>setShowCompare(false)} onRemove={mid=>setCompareList(p=>p.filter(x=>x.mid!==mid))}/>}
+      {showMakatReview&&admin&&<MakatReviewPanel data={data} onClose={()=>setShowMakatReview(false)} approvals={makatApprovals}
+        onApprove={key=>{const n={...makatApprovals,[key]:'ok'};setMakatApprovals(n);try{localStorage.setItem('makat_approvals',JSON.stringify(n));}catch{}}}
+        onReject={key=>{const n={...makatApprovals,[key]:'fix'};setMakatApprovals(n);try{localStorage.setItem('makat_approvals',JSON.stringify(n));}catch{}}}
+      />
       {showNotif    &&<NotificationsPanel
         missingAlerts={missingAlerts} reports={reports} techRequests={techRequests} alerts={alerts}
         data={data} initialTab={notifInitTab}
