@@ -657,7 +657,7 @@ function App() {
       {showMakatReview&&admin&&<MakatReviewPanel data={data} onClose={()=>setShowMakatReview(false)} approvals={makatApprovals}
         onApprove={key=>{const n={...makatApprovals,[key]:'ok'};setMakatApprovals(n);try{localStorage.setItem('makat_approvals',JSON.stringify(n));}catch{}}}
         onReject={key=>{const n={...makatApprovals,[key]:'fix'};setMakatApprovals(n);try{localStorage.setItem('makat_approvals',JSON.stringify(n));}catch{}}}
-      />
+      />}
       {showNotif    &&<NotificationsPanel
         missingAlerts={missingAlerts} reports={reports} techRequests={techRequests} alerts={alerts}
         data={data} initialTab={notifInitTab}
