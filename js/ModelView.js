@@ -20,6 +20,10 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
   const [reportText,  setReportText]  = useState('');
   const [editingName, setEditingName] = useState(false);
   const [nameInput,   setNameInput]   = useState(model.name);
+  const [reviewMode,  setReviewMode]  = useState(false);
+  const [reviewApprovals, setReviewApprovals] = useState(()=>{
+    try{return JSON.parse(localStorage.getItem('makat_approvals')||'{}');}catch{return{};}
+  });
   const firstHiRef = useRef(null);
   const q      = hq.trim().toLowerCase();
   const images = model.images || [];
@@ -197,6 +201,7 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
           <button onClick={exportModelXLS}           style={sB('#388e3c')}>📊 Excel</button>
           <button onClick={shareLink}                style={sB('#7b1fa2')}>🔗 שתף</button>
           <button onClick={()=>setQuickMode(true)}  style={sB('#0097a7')}>📱 נייד</button>
+          {admin && <button onClick={()=>setReviewMode(true)} style={sB('#1565c0')}>✅ בדיקת מק"טים</button>}
           <button onClick={()=>setShowReport(true)} style={sB('#e65100')}>⚠️ דווח שגיאה</button>
           {editor && <>
             <button onClick={()=>setShowMove(true)} style={sB('#455a64')}>🔀 העבר</button>
@@ -404,6 +409,109 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
           </table>
         </div>
       </div>
+
+      {reviewMode && admin && (() => {
+        const reviewCols = ['nameHe','nameEn','mfgPn','tadPn'];
+        const colLabels  = {'nameHe':'שם בעברית','nameEn':'Part Name','mfgPn':'מק"ט יצרן','tadPn':'מק"ט תדיראן'};
+        const parts = model.parts.filter(p => reviewCols.some(c => (p.values[c]||'').trim()));
+        const approved = reviewApprovals;
+        const okCount  = parts.filter(p => approved[brand.id+'__'+model.id+'__'+p.id]==='ok').length;
+        const fixCount = parts.filter(p => approved[brand.id+'__'+model.id+'__'+p.id]==='fix').length;
+        const pct = parts.length ? Math.round(okCount/parts.length*100) : 0;
+        const barColor = pct>=80?'#4caf50':pct>=40?'#ff9800':'#e53935';
+        const setStatus = (pid, status) => {
+          const key = brand.id+'__'+model.id+'__'+pid;
+          const next = {...approved, [key]: approved[key]===status ? undefined : status};
+          Object.keys(next).forEach(k => next[k]===undefined && delete next[k]);
+          setReviewApprovals(next);
+          try{localStorage.setItem('makat_approvals', JSON.stringify(next));}catch{}
+        };
+        return(
+          <Modal onClose={()=>setReviewMode(false)} wide title={'✅ בדיקת מק"טים — '+model.name}>
+            {/* Progress */}
+            <div style={{marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
+                <span style={{fontWeight:'bold',fontSize:13}}>התקדמות אישור</span>
+                <span style={{fontWeight:'bold',color:barColor}}>{okCount}/{parts.length} ({pct}%)</span>
+              </div>
+              <div style={{height:12,background:'var(--border)',borderRadius:8,overflow:'hidden'}}>
+                <div style={{height:'100%',width:pct+'%',background:barColor,transition:'width .3s',borderRadius:8}}/>
+              </div>
+              <div style={{display:'flex',gap:16,marginTop:6,fontSize:12}}>
+                <span style={{color:'#4caf50'}}>✓ אושרו: {okCount}</span>
+                <span style={{color:'#e53935'}}>✗ לתיקון: {fixCount}</span>
+                <span style={{color:'var(--sub)'}}>⏳ ממתינים: {parts.length-okCount-fixCount}</span>
+              </div>
+            </div>
+
+            {/* Bulk actions */}
+            <div style={{display:'flex',gap:8,marginBottom:10}}>
+              <button onClick={()=>parts.forEach(p=>setStatus(p.id,'ok'))}
+                style={{flex:1,padding:'7px',background:'#e8f5e9',border:'1px solid #4caf50',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:'bold',color:'#2e7d32'}}>
+                ✓ אשר הכל ({parts.length})
+              </button>
+              <button onClick={()=>{const next={...approved};parts.forEach(p=>{const k=brand.id+'__'+model.id+'__'+p.id;delete next[k];});setReviewApprovals(next);try{localStorage.setItem('makat_approvals',JSON.stringify(next));}catch{}}}
+                style={{flex:1,padding:'7px',background:'#fff8e1',border:'1px solid #ff9800',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:'bold',color:'#e65100'}}>
+                ↺ איפוס הכל
+              </button>
+            </div>
+
+            {/* Table */}
+            <div style={{overflowX:'auto',border:'1px solid var(--border)',borderRadius:8,maxHeight:'55vh',overflowY:'auto'}}>
+              <table style={{borderCollapse:'collapse',width:'100%',direction:'rtl',fontSize:13}}>
+                <thead style={{position:'sticky',top:0,zIndex:2}}>
+                  <tr style={{background:'var(--row2)'}}>
+                    <th style={{padding:'8px 10px',borderBottom:'2px solid var(--border)',textAlign:'right',fontWeight:'bold',color:'var(--sub)',fontSize:12,minWidth:30}}>#</th>
+                    {reviewCols.map(c=>(
+                      <th key={c} style={{padding:'8px 10px',borderBottom:'2px solid var(--border)',textAlign:'right',fontWeight:'bold',color:'var(--sub)',fontSize:12,minWidth:120}}>{colLabels[c]}</th>
+                    ))}
+                    <th style={{padding:'8px 10px',borderBottom:'2px solid var(--border)',textAlign:'center',fontWeight:'bold',color:'var(--sub)',fontSize:12,minWidth:90}}>סטטוס</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {parts.map((p,i)=>{
+                    const key = brand.id+'__'+model.id+'__'+p.id;
+                    const status = approved[key];
+                    const rowBg = status==='ok'?'#e8f5e9':status==='fix'?'#ffebee':i%2?'var(--row2)':'var(--row1)';
+                    const missing = reviewCols.filter(c=>!(p.values[c]||'').trim());
+                    return(
+                      <tr key={p.id} style={{background:rowBg}}>
+                        <td style={{padding:'8px 10px',borderBottom:'1px solid var(--border)',color:'var(--sub)',fontSize:11}}>{i+1}</td>
+                        {reviewCols.map(c=>{
+                          const val = (p.values[c]||'').trim();
+                          const isEmpty = !val;
+                          return(
+                            <td key={c} style={{padding:'8px 10px',borderBottom:'1px solid var(--border)'}}>
+                              {isEmpty
+                                ? <span style={{color:'#e53935',fontSize:11,fontStyle:'italic'}}>חסר</span>
+                                : <span style={{color: c==='tadPn'?'#1565c0':c==='mfgPn'?'#2e7d32':'var(--text)', fontFamily:c==='tadPn'||c==='mfgPn'?'monospace':'inherit', fontWeight:c==='tadPn'?'bold':'normal'}}>{val}</span>
+                              }
+                            </td>
+                          );
+                        })}
+                        <td style={{padding:'6px 8px',borderBottom:'1px solid var(--border)',textAlign:'center'}}>
+                          <div style={{display:'flex',gap:4,justifyContent:'center'}}>
+                            <button onClick={()=>setStatus(p.id,'ok')}
+                              style={{padding:'4px 10px',border:'1px solid #4caf50',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:'bold',
+                                background:status==='ok'?'#4caf50':'transparent',color:status==='ok'?'#fff':'#4caf50'}}>✓</button>
+                            <button onClick={()=>setStatus(p.id,'fix')}
+                              style={{padding:'4px 10px',border:'1px solid #e53935',borderRadius:6,cursor:'pointer',fontSize:12,fontWeight:'bold',
+                                background:status==='fix'?'#e53935':'transparent',color:status==='fix'?'#fff':'#e53935'}}>✗</button>
+                          </div>
+                          {missing.length>0&&!status&&(
+                            <div style={{fontSize:9,color:'#e65100',marginTop:2}}>חסר: {missing.map(c=>colLabels[c]).join(', ')}</div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <button onClick={()=>setReviewMode(false)} style={{width:'100%',marginTop:12,...BST}}>סגור</button>
+          </Modal>
+        );
+      })()}
 
       {showReport && (
         <Modal onClose={()=>setShowReport(false)} title="⚠️ דיווח על שגיאה בנתונים">
