@@ -125,6 +125,17 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
 
   return(
     <div style={{paddingBottom:44}}>
+
+      {/* ── Filter hint banner — מעל ברכת היום ── */}
+      <div onClick={onOpenSidebar} style={{background:'linear-gradient(135deg,#e3f2fd,#bbdefb)',borderRadius:12,padding:'12px 16px',marginBottom:12,border:'2px dashed #1565c060',display:'flex',alignItems:'center',gap:12,cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)'}}>
+        <span style={{fontSize:24}}>☰</span>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:'bold',fontSize:14,color:'#1565c0',marginBottom:1}}>לסינון דגמים יש ללחוץ על כפתור הסרגל</div>
+          <div style={{fontSize:11,color:'#1976d2'}}>בחר מותג ← קטגוריה ← תת-קטגוריה ← דגם</div>
+        </div>
+        <span style={{fontSize:20,color:'#1565c0'}}>←</span>
+      </div>
+
       {/* Greeting */}
       <div style={{background:'var(--card)',borderRadius:12,padding:'14px 18px',marginBottom:16,boxShadow:'0 1px 4px var(--shadow)',textAlign:'center'}}>
         <span style={{fontWeight:'bold',fontSize:20,color:'var(--text)'}}>{greeting}</span>
@@ -139,7 +150,6 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
           </div>
         ))}
       </div>
-
 
       {/* Favorites */}
       {favModels.length>0&&(
@@ -179,21 +189,8 @@ function HomeScreen({data,onNav,recent,favorites,onToggleFav,loginRole,reports,t
         </div>
       )}
 
-      {/* "Missing model?" — always after recent */}
       <TechRequestBox loginRole={loginRole}/>
-
-      {/* Tech site link — single, always here */}
       <TechSiteLink/>
-
-      {/* Filter hint banner */}
-      <div onClick={onOpenSidebar} style={{background:'linear-gradient(135deg,#e3f2fd,#bbdefb)',borderRadius:12,padding:'14px 18px',marginBottom:16,border:'2px dashed #1565c060',display:'flex',alignItems:'center',gap:12,cursor:'pointer',boxShadow:'0 1px 4px var(--shadow)'}}>
-        <span style={{fontSize:26}}>☰</span>
-        <div style={{flex:1}}>
-          <div style={{fontWeight:'bold',fontSize:14,color:'#1565c0',marginBottom:2}}>לסינון דגמים יש ללחוץ על כפתור הסרגל</div>
-          <div style={{fontSize:12,color:'#1976d2'}}>בחר מותג ← קטגוריה ← תת-קטגוריה ← דגם</div>
-        </div>
-        <span style={{fontSize:22,color:'#1565c0'}}>←</span>
-      </div>
     </div>
   );
 }
