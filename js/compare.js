@@ -1,3 +1,92 @@
+// ══════════ COMPARE — single model full card (read-only, like ModelView) ══════════
+function CompareModelCard({b,c,m,onRemove}){
+  const [filter,setFilter]=useState('');
+  const visibleCols=m.columns.filter(col=>m.parts.some(p=>(p.values[col.id]||'').trim()!==''));
+  let filtered=[...m.parts.filter(p=>p.pinned),...m.parts.filter(p=>!p.pinned)];
+  if(filter.trim())filtered=filtered.filter(p=>partMatches(filter,p,m.columns));
+  const images=m.images||[];
+
+  return(
+    <div style={{minWidth:340,maxWidth:420,flex:'0 0 380px',background:'var(--card)',borderRadius:12,boxShadow:'0 1px 4px var(--shadow)',display:'flex',flexDirection:'column',maxHeight:'72vh'}}>
+
+      {/* Header */}
+      <div style={{padding:'12px 14px',borderBottom:'2px solid '+b.color,flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+          <span style={{background:b.color,color:'#fff',padding:'2px 9px',borderRadius:20,fontSize:11,fontWeight:'bold'}}>{b.name}</span>
+          <span style={{color:'var(--sub)',fontSize:11}}>{c.name}</span>
+          <button onClick={()=>onRemove(m.id)} title="הסר מההשוואה"
+            style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:15,padding:0,marginRight:'auto',lineHeight:1}}>✕</button>
+        </div>
+        <div style={{fontSize:16,fontWeight:'bold',color:'var(--text)',marginBottom:4}}>◈ {m.name}</div>
+        {m.synonyms?.length>0 && (
+          <div style={{fontSize:11,color:'var(--sub)',marginBottom:2}}>שמות נרדפים: {m.synonyms.join(' | ')}</div>
+        )}
+        <div style={{fontSize:11,color:'var(--sub)'}}>{m.parts.length.toLocaleString()} חלקים</div>
+      </div>
+
+      {/* Notes */}
+      {m.notes && (
+        <div style={{background:'#ffebee',color:'#e53935',fontWeight:'bold',fontSize:12,padding:'8px 12px',margin:'10px 12px 0',borderRadius:8,flexShrink:0}}>
+          {m.notes}
+        </div>
+      )}
+
+      {/* Images */}
+      {images.length>0 && (
+        <div style={{display:'flex',gap:6,overflowX:'auto',padding:'10px 12px 0',flexShrink:0}}>
+          {images.map((img,i)=>(
+            <img key={i} src={img} style={{height:70,borderRadius:8,border:'1px solid var(--border)',objectFit:'cover',flexShrink:0}}/>
+          ))}
+        </div>
+      )}
+
+      {/* Quick filter */}
+      <div style={{padding:'10px 12px 6px',flexShrink:0}}>
+        <input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="🔍 חיפוש בתוך הדגם..."
+          style={{width:'100%',border:'1px solid var(--border)',borderRadius:20,padding:'7px 12px',fontSize:12,outline:'none',color:'var(--inp)',background:'var(--ibg)',boxSizing:'border-box'}}/>
+      </div>
+
+      {/* Full data table — read-only */}
+      <div style={{overflow:'auto',flex:1,padding:'0 12px 12px'}}>
+        <table style={{borderCollapse:'collapse',width:'100%',direction:'rtl',fontSize:12}}>
+          <thead>
+            <tr>
+              {visibleCols.map(col=>(
+                <th key={col.id} style={{padding:'7px 8px',textAlign:'right',color:'var(--sub)',fontWeight:'bold',borderBottom:'2px solid '+b.color,whiteSpace:'nowrap',background:'var(--card)',position:'sticky',top:0}}>
+                  {col.name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p,i)=>(
+              <tr key={p.id} style={{background:p.discontinued?'#fff0f0':p.pinned?'#fff8e1':i%2?'var(--row2)':'var(--row1)'}}>
+                {visibleCols.map((col,ci)=>{
+                  const v=p.values[col.id]||'';
+                  return(
+                    <td key={col.id} style={{padding:'6px 8px',borderBottom:'1px solid var(--border)'}}>
+                      {ci===0 && p.discontinued && (
+                        <span style={{display:'inline-block',background:'#e53935',color:'#fff',borderRadius:4,padding:'1px 5px',fontSize:9,fontWeight:'bold',marginLeft:5,verticalAlign:'middle'}}>⛔</span>
+                      )}
+                      {ci===0 && p.pinned && !p.discontinued && (
+                        <span style={{fontSize:9,marginLeft:4}}>📌</span>
+                      )}
+                      <span style={{color:p.discontinued?'#c62828':'var(--text)',textDecoration:p.discontinued?'line-through':''}}>{v}</span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {!filtered.length && (
+              <tr><td colSpan={visibleCols.length||1} style={{padding:20,textAlign:'center',color:'var(--sub)'}}>אין חלקים</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ══════════ COMPARE PANEL ══════════
 function ComparePanel({compareList,data,onClose,onRemove}){
   if(!compareList||compareList.length===0)return null;
@@ -7,16 +96,6 @@ function ComparePanel({compareList,data,onClose,onRemove}){
     const m=c&&c.models.find(x=>x.id===mid);
     return m?{b,c,m}:null;
   }).filter(Boolean);
-
-  // Collect all unique column ids across all models
-  const allColIds=[];const colNameMap={};
-  models.forEach(({m})=>m.columns.forEach(col=>{
-    if(!allColIds.includes(col.id)){allColIds.push(col.id);colNameMap[col.id]=col.name;}
-  }));
-
-  const hStyle={padding:'10px 12px',fontWeight:'bold',fontSize:12,background:'var(--row2)',borderBottom:'2px solid var(--border)',textAlign:'center',minWidth:160,position:'sticky',top:0};
-  const cStyle={padding:'8px 10px',fontSize:12,borderBottom:'1px solid var(--border)',verticalAlign:'top'};
-  const rStyle={padding:'8px 10px',fontSize:12,fontWeight:'bold',color:'var(--sub)',borderBottom:'1px solid var(--border)',background:'var(--row2)',whiteSpace:'nowrap',position:'sticky',right:0};
 
   return(
     <Modal onClose={onClose} wide title="⚖️ השוואת דגמים">
@@ -43,58 +122,10 @@ function ComparePanel({compareList,data,onClose,onRemove}){
           <div style={{fontSize:12}}>לחץ על ⊕ בסרגל לצד שם הדגם</div>
         </div>
       ):(
-        <div style={{overflowX:'auto',maxHeight:'65vh',overflowY:'auto',borderRadius:8,border:'1px solid var(--border)'}}>
-          <table style={{borderCollapse:'collapse',width:'100%',direction:'rtl'}}>
-            <thead>
-              <tr>
-                <th style={{...hStyle,textAlign:'right',background:'var(--card)',minWidth:110}}>שם חלק</th>
-                {models.map(({b,m})=>(
-                  <th key={m.id} style={{...hStyle,borderRight:'3px solid '+b.color,background:b.color+'18'}}>
-                    <div style={{color:b.color,fontSize:10,marginBottom:2}}>{b.name}</div>
-                    <div style={{color:'var(--text)',fontSize:13,fontWeight:'bold'}}>{m.name}</div>
-                    <div style={{color:'var(--sub)',fontSize:10}}>{m.parts.length} חלקים</div>
-                  </th>
-                ))}
-              </tr>
-              {/* Category row */}
-              <tr>
-                <td style={rStyle}>קטגוריה</td>
-                {models.map(({c,m})=><td key={m.id} style={{...cStyle,fontSize:11,color:'var(--sub)'}}>{c.name}</td>)}
-              </tr>
-            </thead>
-            <tbody>
-              {/* One row per column type, showing ALL part values */}
-              {allColIds.map((colId,ri)=>{
-                const vals=models.map(({m})=>{
-                  const col=m.columns.find(c=>c.id===colId);
-                  if(!col)return[];
-                  return m.parts.map(p=>(p.values[colId]||'').trim()).filter(Boolean);
-                });
-                if(!vals.some(v=>v.length>0))return null;
-                return(
-                  <tr key={colId} style={{background:ri%2===0?'var(--row1)':'var(--row2)'}}>
-                    <td style={rStyle}>{colNameMap[colId]}</td>
-                    {models.map(({m},mi)=>{
-                      const col=m.columns.find(c=>c.id===colId);
-                      const pv=col?m.parts.map(p=>(p.values[colId]||'').trim()).filter(Boolean):[];
-                      return(
-                        <td key={m.id} style={cStyle}>
-                          {pv.length===0
-                            ?<span style={{color:'var(--sub)',fontSize:11}}>—</span>
-                            :pv.map((v,i)=>(
-                              <div key={i} style={{fontSize:12,color:'var(--text)',padding:'2px 0',borderBottom:i<pv.length-1?'1px dashed var(--border)':'none'}}>
-                                {v}
-                              </div>
-                            ))
-                          }
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{display:'flex',gap:14,overflowX:'auto',paddingBottom:6}}>
+          {models.map(({b,c,m})=>(
+            <CompareModelCard key={m.id} b={b} c={c} m={m} onRemove={onRemove}/>
+          ))}
         </div>
       )}
       <button onClick={onClose} style={{width:'100%',marginTop:14,...BST}}>סגור</button>
