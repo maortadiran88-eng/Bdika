@@ -1,3 +1,5 @@
+const { useState, useEffect, useMemo, useRef } = React;
+
 function App() {
   const [data,           setData]           = useState(null);
   const [loaded,         setLoaded]         = useState(false);
