@@ -119,17 +119,22 @@ button:active{transform:scale(.97)}
 </script>
 
 <script>
-  Babel.setPresetOptions('react', { runtime: 'classic' });
+  Babel.registerPreset("my-react-env", {
+    presets: [
+      Babel.availablePresets["env"],
+      [Babel.availablePresets["react"], { runtime: "classic" }]
+    ]
+  });
 </script>
 
-<script type="text/babel" data-type="module" src="js/constants.js"></script>
-<script type="text/babel" data-type="module" src="js/firebase.js"></script>
-<script type="text/babel" data-type="module" src="js/helpers.js"></script>
-<script type="text/babel" data-type="module" src="js/components.js"></script>
-<script type="text/babel" data-type="module" src="js/modals.js"></script>
-<script type="text/babel" data-type="module" src="js/ModelView.js"></script>
-<script type="text/babel" data-type="module" src="js/compare.js"></script>
-<script type="text/babel" data-type="module" src="js/makat_review.js"></script>
-<script type="text/babel" data-type="module" src="js/App.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/constants.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/firebase.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/helpers.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/components.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/modals.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/ModelView.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/compare.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/makat_review.js"></script>
+<script type="text/babel" data-type="module" data-presets="my-react-env" src="js/App.js"></script>
 </body>
 </html>
