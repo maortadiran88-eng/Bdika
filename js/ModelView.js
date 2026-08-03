@@ -1,7 +1,8 @@
 function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onToggleFav,loginRole,
   onUpdate,onRenameModel,onAddPart,onDelPart,onCell,onColName,onMoveCol,onAddCol,onDelCol,onPaste,
   onImgUpload,onDelImg,onImgUrl,onOpenImg,onMove,onDuplicate,onCopyPartsFrom,
-  onAddToCart,onReport,waDefaults,partsDisclaimer,onUpdateDisclaimer}) {
+  onAddToCart,onReport,waDefaults,partsDisclaimer,onUpdateDisclaimer,
+  reviewApprovals,onReviewApprovalsChange}) {
 
   const [synIn,       setSynIn]       = useState(model.synonyms?.join(', ')||'');
   const [editSyn,     setEditSyn]     = useState(false);
@@ -21,9 +22,6 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
   const [editingName, setEditingName] = useState(false);
   const [nameInput,   setNameInput]   = useState(model.name);
   const [reviewMode,  setReviewMode]  = useState(false);
-  const [reviewApprovals, setReviewApprovals] = useState(()=>{
-    try{return JSON.parse(localStorage.getItem('makat_approvals')||'{}');}catch{return{};}
-  });
   const firstHiRef = useRef(null);
   const q      = hq.trim().toLowerCase();
   const images = model.images || [];
@@ -423,8 +421,7 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
           const key = brand.id+'__'+model.id+'__'+pid;
           const next = {...approved, [key]: approved[key]===status ? undefined : status};
           Object.keys(next).forEach(k => next[k]===undefined && delete next[k]);
-          setReviewApprovals(next);
-          try{localStorage.setItem('makat_approvals', JSON.stringify(next));}catch{}
+          onReviewApprovalsChange(next);
         };
         return(
           <Modal onClose={()=>setReviewMode(false)} wide title={'✅ בדיקת מק"טים — '+model.name}>
@@ -450,7 +447,7 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
                 style={{flex:1,padding:'7px',background:'#e8f5e9',border:'1px solid #4caf50',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:'bold',color:'#2e7d32'}}>
                 ✓ אשר הכל ({parts.length})
               </button>
-              <button onClick={()=>{const next={...approved};parts.forEach(p=>{const k=brand.id+'__'+model.id+'__'+p.id;delete next[k];});setReviewApprovals(next);try{localStorage.setItem('makat_approvals',JSON.stringify(next));}catch{}}}
+              <button onClick={()=>{const next={...approved};parts.forEach(p=>{const k=brand.id+'__'+model.id+'__'+p.id;delete next[k];});onReviewApprovalsChange(next);}}
                 style={{flex:1,padding:'7px',background:'#fff8e1',border:'1px solid #ff9800',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:'bold',color:'#e65100'}}>
                 ↺ איפוס הכל
               </button>

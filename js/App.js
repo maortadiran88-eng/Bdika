@@ -32,7 +32,6 @@ function App() {
   const [showBulkDel,    setShowBulkDel]    = useState(false);
   const [showHelp,       setShowHelp]       = useState(false);
   const [showDashboard,  setShowDashboard]  = useState(false);
-  const [showVersions,   setShowVersions]   = useState(false);
   const [showNewsEditor, setShowNewsEditor] = useState(false);
   const [showBroadcast,  setShowBroadcast]  = useState(false);
   const [showUsersMgr,   setShowUsersMgr]   = useState(false);
@@ -435,7 +434,6 @@ function App() {
           {admin&&<button onClick={()=>setShowBulkMove(true)}  style={bB('rgba(255,255,255,.18)')}>🔀</button>}
           {admin&&<button onClick={()=>setShowBulkDel(true)}   style={bB('#b71c1c')}>🗑</button>}
           {admin&&<button onClick={()=>{setShowHistory(true);fbGetHist().then(setHistData);}} style={bB('rgba(255,255,255,.18)')}>📋</button>}
-          {admin&&<button onClick={()=>setShowVersions(true)}  style={bB('rgba(255,255,255,.18)')}>🕐</button>}
           {admin&&<button onClick={()=>setShowDashboard(true)} style={bB('rgba(255,255,255,.18)')}>📊</button>}
           {admin&&<button onClick={()=>setShowNewsEditor(true)} style={bB('rgba(255,255,255,.18)')}>📰</button>}
           {admin&&<button onClick={()=>setShowBroadcast(true)} style={bB('#e65100')}>📢</button>}
@@ -627,6 +625,8 @@ function App() {
                 onDuplicate={()=>duplicateModel(brand.id,cat.id,model.id)}
                 onCopyPartsFrom={(sb,sc,sm)=>copyPartsFrom(sb,sc,sm,brand.id,cat.id,model.id)}
                 onAddToCart={addToCart}
+                reviewApprovals={makatApprovals}
+                onReviewApprovalsChange={n=>{setMakatApprovals(n);try{localStorage.setItem('makat_approvals',JSON.stringify(n));}catch{}}}
                 onReport={async text=>{await fbSaveReport({bid:brand.id,cid:cat.id,mid:model.id,modelName:model.name,brandName:brand.name,text,role:loginRole});alert('✅ הדיווח נשלח למנהל');}}
                 waDefaults={data.waDefaults||['nameHe','tadPn']}
               />
@@ -672,9 +672,6 @@ function App() {
         onClose={()=>setShowNotif(false)}/>}
       {showHelp     &&<HelpModal role={loginRole} onClose={()=>setShowHelp(false)}/>}
       {showDashboard&&<DashboardModal data={data} onClose={()=>setShowDashboard(false)}/>}
-      {showVersions &&<VersionHistoryModal
-        onRestore={restoredBrands=>{restoredBrands.forEach(b=>b.categories.forEach(c=>c.models.forEach(m=>changedMids.current.add(m.id))));mut(d=>({...d,brands:restoredBrands}));setSel(null);}}
-        onClose={()=>setShowVersions(false)}/>}
       {showNewsEditor&&<NewsEditorModal onClose={()=>{setShowNewsEditor(false);fbGetNews().then(docs=>setNewsItems(docs.map(d=>d.text)));}}/>}
       {showBroadcast&&<BroadcastModal currentMsg={data.systemMsg||''} onClose={()=>setShowBroadcast(false)}/>}
       {showUsersMgr &&<UsersManagerModal data={data} onSave={users=>{mut(d=>({...d,users}));setShowUsersMgr(false);alert('✅ המשתמשים עודכנו');}} onClose={()=>setShowUsersMgr(false)}/>}
