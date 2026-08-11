@@ -281,11 +281,31 @@ function App() {
     if(!data)return;
     try{
       const wb = XLSX.utils.book_new();
-      const allRows = [['מותג','קטגוריה','שם דגם','שם חלק בעברית','Part Name','מק"ט יצרן','מק"ט תדיראן','סטטוס']];
+
+      // Build the full ordered set of column ids/names used anywhere in the catalog.
+      // Defaults first (in their standard order, incl. the identification number "ref"),
+      // then any extra custom columns editors have added, in first-seen order.
+      const defaultOrder = ['ref','nameHe','nameEn','mfgPn','tadPn'];
+      const colNameMap = {};
+      DCOLS().forEach(c=>{colNameMap[c.id]=c.name;});
+      const extraIds = [];
+      data.brands.forEach(b=>b.categories.forEach(c=>c.models.forEach(m=>{
+        (m.columns||[]).forEach(col=>{
+          if(!colNameMap[col.id]) colNameMap[col.id]=col.name;
+          if(!defaultOrder.includes(col.id) && !extraIds.includes(col.id)) extraIds.push(col.id);
+        });
+      })));
+      const colIds   = [...defaultOrder, ...extraIds];
+      const colNames = colIds.map(id=>colNameMap[id]||id);
+
+      const fixedHead = ['שם דגם','שמות נרדפים','הערות דגם','מספר שרטוטים/תמונות'];
+      const allHeader = ['מותג','קטגוריה', ...fixedHead, ...colNames, 'נפוץ','סטטוס'];
+      const allRows = [allHeader];
 
       // One sheet per BRAND
       data.brands.forEach(b => {
-        const brandRows = [['קטגוריה','שם דגם','שם חלק בעברית','Part Name','מק"ט יצרן','מק"ט תדיראן','סטטוס']];
+        const brandHeader = ['קטגוריה', ...fixedHead, ...colNames, 'נפוץ','סטטוס'];
+        const brandRows = [brandHeader];
         let brandHasParts = false;
 
         b.categories.forEach(cat => {
@@ -293,22 +313,12 @@ function App() {
             if(!m.parts.length) return;
             brandHasParts = true;
 
-            // Separator row — model name
-            brandRows.push([`--- ${m.name} ---`,'','','','','','']);
+            const modelInfo = [m.name, (m.synonyms||[]).join(' | '), m.notes||'', (m.images||[]).length||0];
 
             m.parts.forEach(p => {
-              const row = [
-                cat.name,
-                m.name,
-                p.values.nameHe||'',
-                p.values.nameEn||'',
-                p.values.mfgPn ||'',
-                p.values.tadPn ||'',
-                p.discontinued ? 'הופסק לייצור' : ''
-              ];
-              brandRows.push(row);
-              // accumulate for "כל הנתונים"
-              allRows.push([b.name, cat.name, m.name, p.values.nameHe||'', p.values.nameEn||'', p.values.mfgPn||'', p.values.tadPn||'', p.discontinued?'הופסק':'']);
+              const vals = colIds.map(id=>p.values[id]||'');
+              brandRows.push([cat.name, ...modelInfo, ...vals, p.pinned?'נפוץ':'', p.discontinued ? 'הופסק לייצור' : '']);
+              allRows.push([b.name, cat.name, ...modelInfo, ...vals, p.pinned?'נפוץ':'', p.discontinued?'הופסק לייצור':'']);
             });
           });
         });
@@ -316,10 +326,8 @@ function App() {
         if(!brandHasParts) return; // skip brand with no parts
 
         const ws = XLSX.utils.aoa_to_sheet(brandRows);
-        // Column widths
-        ws['!cols'] = [{wch:16},{wch:20},{wch:30},{wch:30},{wch:16},{wch:16},{wch:14}];
+        ws['!cols'] = brandHeader.map(()=>({wch:18}));
 
-        // Style header row bold (basic)
         const sheetName = b.name.replace(/[\/:*?\[\]]/g,'').slice(0,31);
         try { XLSX.utils.book_append_sheet(wb, ws, sheetName); }
         catch  { XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0,25)+gid().slice(0,5)); }
@@ -327,7 +335,7 @@ function App() {
 
       // Final sheet — all data
       const wsAll = XLSX.utils.aoa_to_sheet(allRows);
-      wsAll['!cols'] = [{wch:12},{wch:16},{wch:20},{wch:30},{wch:30},{wch:16},{wch:16},{wch:14}];
+      wsAll['!cols'] = allHeader.map(()=>({wch:18}));
       XLSX.utils.book_append_sheet(wb, wsAll, 'כל הנתונים');
 
       XLSX.writeFile(wb, `ac-catalog-${new Date().toISOString().slice(0,10)}.xlsx`);

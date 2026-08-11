@@ -60,6 +60,23 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
   };
   const toggleRow  = id => setSelRows(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
   const clearRows  = ()  => setSelRows(new Set());
+  const moveRow = (id, dir) => {
+    const disp = filtered;
+    const idx = disp.findIndex(p=>p.id===id);
+    const swapIdx = idx+dir;
+    if (idx<0 || swapIdx<0 || swapIdx>=disp.length) return;
+    if (!!disp[idx].pinned !== !!disp[swapIdx].pinned) return; // don't cross the pinned/regular boundary
+    const arr = [...model.parts];
+    const posA = arr.findIndex(p=>p.id===disp[idx].id);
+    const posB = arr.findIndex(p=>p.id===disp[swapIdx].id);
+    [arr[posA],arr[posB]] = [arr[posB],arr[posA]];
+    onUpdate({parts:arr});
+  };
+  const sortAndSave = cid => {
+    const sorted = [...model.parts].sort((a,b) =>
+      (a.values[cid]||'').toString().localeCompare((b.values[cid]||'').toString(),'he',{numeric:true,sensitivity:'base'}));
+    onUpdate({parts:sorted});
+  };
   const handleSort = cid => {
     if (!sortCol||sortCol.id!==cid) setSortCol({id:cid,dir:'asc'});
     else if (sortCol.dir==='asc')   setSortCol({id:cid,dir:'desc'});
@@ -92,11 +109,28 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
 
   const exportModelXLS = () => {
     const wb = XLSX.utils.book_new();
-    // Main sheet
+
+    // Info sheet — model name, synonyms, notes, drawings count
+    const infoRows = [
+      ['שם דגם', model.name],
+      ['קטגוריה', cat.name],
+      ['מותג', brand.name],
+      ['שמות נרדפים', (model.synonyms||[]).join(' | ')],
+      ['הערות', model.notes||''],
+      ['מספר שרטוטים/תמונות מצורפים', (model.images||[]).length],
+      ['מספר חלקים', model.parts.length],
+    ];
+    const wsInfo = XLSX.utils.aoa_to_sheet(infoRows);
+    wsInfo['!cols'] = [{wch:26},{wch:50}];
+    XLSX.utils.book_append_sheet(wb, wsInfo, 'פרטי דגם');
+
+    // Parts sheet — every column defined on the model, in order
     const hdr = model.columns.map(c=>c.name);
-    const rows = model.parts.map(p => [...model.columns.map(c=>p.values[c.id]||''), p.discontinued?'הופסק':'']);
-    const ws = XLSX.utils.aoa_to_sheet([[ ...hdr,'סטטוס'], ...rows]);
-    XLSX.utils.book_append_sheet(wb, ws, model.name.slice(0,31));
+    const rows = model.parts.map(p => [...model.columns.map(c=>p.values[c.id]||''), p.pinned?'נפוץ':'', p.discontinued?'הופסק':'']);
+    const ws = XLSX.utils.aoa_to_sheet([[ ...hdr,'נפוץ','סטטוס'], ...rows]);
+    ws['!cols'] = hdr.map(()=>({wch:20})).concat([{wch:10},{wch:12}]);
+    XLSX.utils.book_append_sheet(wb, ws, 'חלקים'.slice(0,31));
+
     XLSX.writeFile(wb,`${brand.name}-${model.name}.xlsx`);
   };
 
@@ -326,6 +360,7 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
                           </div>
                           <input value={col.name} onChange={e=>onColName(col.id,e.target.value)}
                             style={{border:'1px dashed #ccc',borderRadius:3,padding:'2px 5px',fontSize:12,fontWeight:'bold',width:'100%',minWidth:50,background:'transparent',color:'#333'}}/>
+                          <button onClick={()=>sortAndSave(col.id)} title={'מיין ושמור סדר לפי '+col.name} style={{background:'none',border:'none',cursor:'pointer',color:'#666',fontSize:12,padding:0,flexShrink:0}}>🔢</button>
                           {(admin||editor)&&model.columns.length>1&&<button onClick={()=>onDelCol(col.id)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:16,padding:0,lineHeight:1,flexShrink:0}}>×</button>}
                         </div>
                       : <div onClick={()=>handleSort(col.id)} style={{cursor:'pointer',display:'flex',alignItems:'center',gap:4,userSelect:'none'}}>
@@ -334,7 +369,7 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
                   </th>
                 ))}
                 {editor && <th style={{padding:'9px 6px',borderBottom:`2px solid ${brand.color}`,fontSize:11,color:'#888',minWidth:70}}>תגיות</th>}
-                <th style={{width:editor?60:40,borderBottom:`2px solid ${brand.color}`}}></th>
+                <th style={{width:editor?84:40,borderBottom:`2px solid ${brand.color}`}}></th>
               </tr>
             </thead>
             <tbody>
@@ -384,7 +419,15 @@ function ModelView({brand,cat,model,editor,admin,viewer,hq,data,favorites,onTogg
                     )}
 
                     <td style={{padding:'5px 4px',textAlign:'center',borderBottom:'1px solid var(--border)'}} onClick={e=>e.stopPropagation()}>
-                      <div style={{display:'flex',gap:2,justifyContent:'center',flexWrap:'wrap'}}>
+                      <div style={{display:'flex',gap:2,justifyContent:'center',flexWrap:'wrap',alignItems:'center'}}>
+                        {(admin||editor) && !filter.trim() && (
+                          <div style={{display:'flex',flexDirection:'column',gap:0}}>
+                            <button onClick={()=>moveRow(p.id,-1)} disabled={i===0} title="הזז למעלה"
+                              style={{background:'none',border:'none',cursor:i===0?'default':'pointer',color:i===0?'#ccc':'#666',fontSize:10,padding:0,lineHeight:1}}>▲</button>
+                            <button onClick={()=>moveRow(p.id,1)} disabled={i===filtered.length-1} title="הזז למטה"
+                              style={{background:'none',border:'none',cursor:i===filtered.length-1?'default':'pointer',color:i===filtered.length-1?'#ccc':'#666',fontSize:10,padding:0,lineHeight:1}}>▼</button>
+                          </div>
+                        )}
                         <button onClick={()=>onAddToCart(brand.id,cat.id,model.id,p.id)} title="הוסף לסל" style={{background:'none',border:'none',cursor:'pointer',fontSize:13}}>🛒</button>
                         {editor && <>
                           <button onClick={()=>onUpdate({parts:model.parts.map(pp=>pp.id!==p.id?pp:{...pp,pinned:!pp.pinned})})}
