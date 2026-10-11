@@ -21,7 +21,7 @@ async function fbLoad() {
   allD.forEach(doc => { if (doc.exists) pm[doc.id] = doc.data(); });
   d.brands.forEach(b => b.categories.forEach(c => c.models.forEach(m => {
     const pd = pm[m.id]||{};
-    m.parts    = (pd.parts||[]).map(p=>({discontinued:false,tags:'',pinned:false,comments:[],...p}));
+    m.parts    = (pd.parts||[]).map(p=>({discontinued:false,tags:'',pinned:false,comments:[],hidden:false,...p}));
     m.images   = pd.images   || [];
     m.columns  = pd.columns  || DCOLS();
     m.synonyms = pd.synonyms || [];
@@ -30,23 +30,42 @@ async function fbLoad() {
   return d;
 }
 
+// Firestore rejects any single document above ~1 MiB (1,048,576 bytes). Hebrew
+// text is 2 bytes/char, so measure real UTF-8 bytes, not string length.
+const FS_DOC_LIMIT = 1000000;
+function fsBytes(o){ try{ return new TextEncoder().encode(JSON.stringify(o)).length; }catch(e){ return 0; } }
+
 async function fbSave(data, mids) {
   const meta = {
     users: data.users || DEFAULT_USERS,
-    pass:data.pass, editorPass:data.editorPass, viewerPass:data.viewerPass,
     waDefaults:data.waDefaults||['nameHe','tadPn'],
     welcomeTitle:data.welcomeTitle, welcomeSub:data.welcomeSub,
     disclaimer:data.disclaimer, partsDisclaimer:data.partsDisclaimer||DEFAULT_DISCLAIMER,
     tips:data.tips||[], greetings:data.greetings||null, systemMsg:data.systemMsg||null,
-    brands:data.brands.map(b=>({...b,categories:b.categories.map(c=>({...c,models:c.models.map(m=>({id:m.id,name:m.name}))}))}))
+    secure:!!data.secure,
+    brands:data.brands.map(b=>({...b,categories:b.categories.map(c=>({...c,models:c.models.map(m=>({id:m.id,name:m.name,hidden:m.hidden||false}))}))}))
   };
+  const metaBytes = fsBytes(meta);
+  console.info('[fbSave] meta '+Math.round(metaBytes/1024)+'KB · models to write: '+mids.size);
+  if (metaBytes > FS_DOC_LIMIT) {
+    const err = new Error('מסמך ה-meta גדול מדי ('+Math.round(metaBytes/1024)+'KB, מגבלת Firestore ~1MB) — כנראה בגלל דגמים בתת-קטגוריות שנשמרים בתוכו (כולל חלקים ותמונות). השמירה נעצרה כדי לא להעמיס על Firebase.');
+    err.nonRetryable = true; throw err;
+  }
   await db.collection('catalog').doc('meta').set({d:meta});
   const batch = db.batch();
+  const tooBig = []; let n = 0;
   data.brands.forEach(b=>b.categories.forEach(c=>c.models.forEach(m=>{
     if(!mids.has(m.id))return;
-    batch.set(db.collection('parts').doc(m.id),{parts:m.parts||[],images:m.images||[],columns:m.columns||DCOLS(),synonyms:m.synonyms||[],notes:m.notes||''});
+    const payload = {parts:m.parts||[],images:m.images||[],columns:m.columns||DCOLS(),synonyms:m.synonyms||[],notes:m.notes||''};
+    const bytes = fsBytes(payload);
+    if (bytes > FS_DOC_LIMIT) { tooBig.push(m.name+' ('+Math.round(bytes/1024)+'KB)'); return; }
+    batch.set(db.collection('parts').doc(m.id), payload); n++;
   })));
-  await batch.commit();
+  if (n) await batch.commit();
+  if (tooBig.length) {
+    const err = new Error('הדגמים הבאים גדולים מדי לשמירה (מעל ~1MB למסמך, לרוב בגלל תמונות/שרטוטים): '+tooBig.join(', ')+'. שאר השינויים נשמרו. הקטן או הסר תמונות מהדגמים האלה.');
+    err.nonRetryable = true; throw err;
+  }
 }
 
 // ── Activity log ──
@@ -109,10 +128,21 @@ async function fbGetBroadcast() {
 // ── Snapshots ──
 async function fbSaveSnapshot(data, actor, action) {
   try {
+    // A snapshot is the WHOLE catalog (every part + image) in one document. If
+    // it can't fit in a single Firestore document the server rejects it anyway —
+    // but only after we've pushed megabytes through the shared write stream,
+    // which starves/blocks the real saves queued behind it. Skip it instead.
+    const brandsJson = JSON.stringify(data.brands);
+    const bytes = new TextEncoder().encode(brandsJson).length;
+    if (bytes > FS_DOC_LIMIT) {
+      console.warn('[snapshot] דילוג: הקטלוג המלא ('+Math.round(bytes/1024)+'KB) גדול ממסמך Firestore בודד (~1MB), ולכן לא נשמר גיבוי גרסה.');
+      return;
+    }
     const col = db.collection('snapshots');
-    await col.add({actor,action,ts:firebase.firestore.FieldValue.serverTimestamp(),brands:JSON.stringify(data.brands)});
-    const all = await col.orderBy('ts','desc').get();
-    if (all.docs.length>10) await Promise.all(all.docs.slice(10).map(d=>d.ref.delete()));
+    await col.add({actor,action,ts:firebase.firestore.FieldValue.serverTimestamp(),brands:brandsJson});
+    // Only fetch the newest 11 (not every snapshot ever stored — each can be ~1MB)
+    const recent = await col.orderBy('ts','desc').limit(11).get();
+    if (recent.docs.length>10) await Promise.all(recent.docs.slice(10).map(d=>d.ref.delete()));
   } catch {}
 }
 async function fbGetSnapshots() {
@@ -183,4 +213,37 @@ async function fbClearAlerts() {
     s.docs.forEach(d=>batch.delete(d.ref));
     await batch.commit();
   } catch {}
+}
+
+// ── Secure mode: hidden staff accounts (Firebase Auth, free on the Spark plan) ──
+const STAFF_EMAIL = { admin:'admin@catalog.invalid', editor:'editor@catalog.invalid' };
+const _CRED_MISS  = ['auth/wrong-password','auth/invalid-credential','auth/invalid-login-credentials','auth/user-not-found'];
+
+// Try the typed password against the admin, then the editor account.
+// → 'admin' | 'editor' | null (no match). Throws on network / too-many-requests / provider-disabled.
+async function fbStaffLogin(pwd) {
+  const a = window._auth;
+  if (!a) return null;
+  for (const role of ['admin','editor']) {
+    try { await a.signInWithEmailAndPassword(STAFF_EMAIL[role], pwd); return role; }
+    catch (e) { if (_CRED_MISS.includes(e.code)) continue; throw e; }
+  }
+  return null;
+}
+async function fbStaffLogout() { try { if (window._auth && window._auth.currentUser) await window._auth.signOut(); } catch (e) {} }
+function fbStaffRole() {
+  const u = window._auth && window._auth.currentUser;
+  if (!u) return null;
+  return u.email === STAFF_EMAIL.admin ? 'admin' : u.email === STAFF_EMAIL.editor ? 'editor' : null;
+}
+// Change a staff password from inside the app. Signs in on a SECOND app instance,
+// so the current session is untouched. Needs the current password of that account.
+async function fbChangeStaffPassword(role, oldPwd, newPwd) {
+  const opts = firebase.app().options;
+  const app2 = firebase.apps.find(a => a.name === 'pwchange') || firebase.initializeApp(opts, 'pwchange');
+  const a2 = app2.auth();
+  try { await a2.setPersistence(firebase.auth.Auth.Persistence.NONE); } catch (e) {}
+  const cred = await a2.signInWithEmailAndPassword(STAFF_EMAIL[role], oldPwd);
+  await cred.user.updatePassword(newPwd);
+  await a2.signOut();
 }

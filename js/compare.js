@@ -15,7 +15,7 @@ function CompareModelCard({b,c,m,onRemove}){
           <span style={{background:b.color,color:'#fff',padding:'2px 9px',borderRadius:20,fontSize:11,fontWeight:'bold'}}>{b.name}</span>
           <span style={{color:'var(--sub)',fontSize:11}}>{c.name}</span>
           <button onClick={()=>onRemove(m.id)} title="הסר מההשוואה"
-            style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:15,padding:0,marginRight:'auto',lineHeight:1}}>✕</button>
+            style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:15,padding:0,marginRight:'auto',lineHeight:1}}>✕</button>
         </div>
         <div style={{fontSize:16,fontWeight:'bold',color:'var(--text)',marginBottom:4}}>◈ {m.name}</div>
         {m.synonyms?.length>0 && (
@@ -26,7 +26,7 @@ function CompareModelCard({b,c,m,onRemove}){
 
       {/* Notes */}
       {m.notes && (
-        <div style={{background:'#ffebee',color:'#e53935',fontWeight:'bold',fontSize:12,padding:'8px 12px',margin:'10px 12px 0',borderRadius:8,flexShrink:0}}>
+        <div style={{background:'var(--red-bg)',color:'var(--red)',fontWeight:'bold',fontSize:12,padding:'8px 12px',margin:'10px 12px 0',borderRadius:8,flexShrink:0}}>
           {m.notes}
         </div>
       )}
@@ -60,18 +60,18 @@ function CompareModelCard({b,c,m,onRemove}){
           </thead>
           <tbody>
             {filtered.map((p,i)=>(
-              <tr key={p.id} style={{background:p.discontinued?'#fff0f0':p.pinned?'#fff8e1':i%2?'var(--row2)':'var(--row1)'}}>
+              <tr key={p.id} style={{background:p.discontinued?'var(--red-bg)':p.pinned?'var(--orange-bg)':i%2?'var(--row2)':'var(--row1)'}}>
                 {visibleCols.map((col,ci)=>{
                   const v=p.values[col.id]||'';
                   return(
                     <td key={col.id} style={{padding:'6px 8px',borderBottom:'1px solid var(--border)'}}>
                       {ci===0 && p.discontinued && (
-                        <span style={{display:'inline-block',background:'#e53935',color:'#fff',borderRadius:4,padding:'1px 5px',fontSize:9,fontWeight:'bold',marginLeft:5,verticalAlign:'middle'}}>⛔</span>
+                        <span style={{display:'inline-block',background:'var(--red)',color:'#fff',borderRadius:4,padding:'1px 5px',fontSize:9,fontWeight:'bold',marginLeft:5,verticalAlign:'middle'}}>⛔</span>
                       )}
                       {ci===0 && p.pinned && !p.discontinued && (
                         <span style={{fontSize:9,marginLeft:4}}>📌</span>
                       )}
-                      <span style={{color:p.discontinued?'#c62828':'var(--text)',textDecoration:p.discontinued?'line-through':''}}>{v}</span>
+                      <span style={{color:p.discontinued?'var(--red)':'var(--text)',textDecoration:p.discontinued?'line-through':''}}>{v}</span>
                     </td>
                   );
                 })}
@@ -105,7 +105,7 @@ function ComparePanel({compareList,data,onClose,onRemove}){
           <div key={m.id} style={{display:'flex',alignItems:'center',gap:6,padding:'4px 10px',borderRadius:20,background:b.color+'22',border:'1px solid '+b.color+'55',fontSize:12}}>
             <span style={{background:b.color,color:'#fff',padding:'1px 7px',borderRadius:10,fontSize:11,fontWeight:'bold'}}>{b.name}</span>
             <span style={{fontWeight:'bold',color:'var(--text)'}}>{m.name}</span>
-            <button onClick={()=>onRemove(m.id)} style={{background:'none',border:'none',color:'#e53935',cursor:'pointer',fontSize:14,padding:0,lineHeight:1}}>✕</button>
+            <button onClick={()=>onRemove(m.id)} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:14,padding:0,lineHeight:1}}>✕</button>
           </div>
         ))}
         {compareList.length<3&&(

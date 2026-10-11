@@ -6,8 +6,11 @@
 📁 catalog/
   index.html          ← נקודת כניסה (CDN imports + Firebase init)
   README.md
+  SECURITY.md         ← הפעלת מצב מאובטח (חינם)
+  firestore.rules     ← כללי Firestore מוצעים
   📁 js/
     constants.js      ← קבועים, INIT, DCOLS, DCATS
+    security.js       ← הצפנת סיסמאות, לוגיקת כניסה, כללי Firestore
     firebase.js       ← כל קריאות Firebase (fbLoad, fbSave, fbHist …)
     helpers.js        ← פונקציות עזר + Modal + style atoms
     components.js     ← LoginScreen, HomeScreen, SidebarBrand, CartPanel, NotificationsPanel
@@ -22,15 +25,10 @@
 2. Settings → Pages → Branch: main / (root)
 3. הכנס לכתובת `https://<username>.github.io/<repo>/`
 
-## סיסמאות ברירת מחדל
+## סיסמאות
 
-| תפקיד | סיסמה |
-|--------|--------|
-| מנהל   | admin1234 |
-| עורך   | editor1234 |
-| צופה   | tadir123 |
-
-> ניתן לשנות מההגדרות (🔑) לאחר כניסה כמנהל.
+הסיסמאות מנוהלות מתוך האתר (תפריט ⋮ ← 👥 ניהול משתמשים) ונשמרות מוצפנות.
+**אין לשמור סיסמאות בקוד או ב-README.** פרטים נוספים ב-`SECURITY.md`.
 
 ## Firebase
 

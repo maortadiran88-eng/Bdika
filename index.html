@@ -6,69 +6,115 @@
 <title>קטלוג חלקי חילוף — תדיראן VRF</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* ══════════════════════════════════════════════════════════
+   DESIGN SYSTEM — Tadiran VRF Parts Catalog
+   Professional, calm, information-first. RTL native.
+   ══════════════════════════════════════════════════════════ */
+
 /* ─── Reset ───────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;direction:rtl;background:var(--bg);color:var(--text);transition:background .3s,color .3s;-webkit-font-smoothing:antialiased}
-
-/* ─── Light mode — clean & high-contrast ─── */
-:root{
-  --bg:#f4f6f9;
-  --card:#ffffff;
-  --card2:#f8fafc;
-  --text:#1a202c;
-  --text2:#4a5568;
-  --sub:#718096;
-  --border:#e2e8f0;
-  --border2:#cbd5e0;
-  --inp:#1a202c;
-  --row1:#ffffff;
-  --row2:#f7fafc;
-  --hi:#fefcbf;
-  --sel:#c6f6d5;
-  --sidebar:#ffffff;
-  --ibg:#ffffff;
-  --shadow:rgba(0,0,0,.06);
-  --shadow2:rgba(0,0,0,.12);
-  --accent:#2b6cb0;
-  --accent-light:#ebf4ff;
-  --green:#276749;
-  --red:#c53030;
-  --orange:#c05621;
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'Rubik','Segoe UI',Arial,sans-serif;
+  direction:rtl;background:var(--bg);color:var(--text);
+  transition:background .25s,color .25s;
+  -webkit-font-smoothing:antialiased;
+  font-size:14px;line-height:1.5;
 }
 
-/* ─── Dark mode — deep professional ─────── */
+/* ─── Light mode — 2026 Deep Premium Blue + Cyan ─── */
+:root{
+  --bg:#eef2f9;
+  --card:#ffffff;
+  --card2:#f3f7fc;
+  --text:#0a1730;
+  --text2:#33415c;
+  --sub:#64748b;
+  --border:#e1e8f5;
+  --border2:#c8d4ea;
+  --inp:#0a1730;
+  --row1:#ffffff;
+  --row2:#f3f7fc;
+  --hi:#fef9c3;
+  --sel:#dcfce7;
+  --sidebar:#ffffff;
+  --ibg:#ffffff;
+  --shadow:rgba(10,23,48,.07);
+  --shadow2:rgba(10,23,48,.16);
+
+  /* Brand / functional colors */
+  --primary:#0a2a63;
+  --primary-dark:#071b45;
+  --primary-light:#e7f0fb;
+  --accent:#0a2a63;
+  --accent-light:#e7f0fb;
+  --cyan:#0fb8cf;
+  --cyan-glow:rgba(15,184,207,.35);
+  --green:#15803d;
+  --green-bg:#eafaf0;
+  --orange:#b45309;
+  --orange-bg:#fff7e6;
+  --red:#c0242c;
+  --red-bg:#fdecec;
+
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:18px;
+  --radius-xl:26px;
+
+  --glass-bg:rgba(255,255,255,.55);
+  --glass-border:rgba(255,255,255,.75);
+}
+
+/* ─── Dark mode — Midnight Tech ──────────── */
 .dark{
-  --bg:#0d1117;
-  --card:#161b22;
-  --card2:#1c2128;
-  --text:#e6edf3;
-  --text2:#b1bac4;
-  --sub:#8b949e;
-  --border:#30363d;
-  --border2:#484f58;
-  --inp:#e6edf3;
-  --row1:#161b22;
-  --row2:#1c2128;
+  --bg:#060c1c;
+  --card:#0d1b33;
+  --card2:#101f3d;
+  --text:#eaf1fb;
+  --text2:#c3cede;
+  --sub:#8695b3;
+  --border:#1c3054;
+  --border2:#2c4570;
+  --inp:#eaf1fb;
+  --row1:#0d1b33;
+  --row2:#101f3d;
   --hi:#3d3510;
   --sel:#0d3321;
-  --sidebar:#161b22;
-  --ibg:#21262d;
+  --sidebar:#0d1b33;
+  --ibg:#101f3d;
   --shadow:rgba(0,0,0,.4);
   --shadow2:rgba(0,0,0,.6);
-  --accent:#58a6ff;
-  --accent-light:#1c2d4f;
-  --green:#3fb950;
-  --red:#f85149;
-  --orange:#ffa657;
+
+  --primary:#2f8fe0;
+  --primary-dark:#2270b8;
+  --primary-light:#132846;
+  --accent:#2f8fe0;
+  --accent-light:#132846;
+  --cyan:#31d7e8;
+  --cyan-glow:rgba(49,215,232,.45);
+  --green:#3fcf76;
+  --green-bg:#0f2a1c;
+  --orange:#ffb74d;
+  --orange-bg:#332309;
+  --red:#ff6b6b;
+  --red-bg:#3a1414;
+
+  --glass-bg:rgba(13,27,51,.55);
+  --glass-border:rgba(255,255,255,.12);
 }
 
 /* ─── Scrollbar ───────────────────────────── */
-::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:10px}
 ::-webkit-scrollbar-thumb:hover{background:var(--sub)}
@@ -76,30 +122,233 @@ body{font-family:'Segoe UI',Arial,sans-serif;direction:rtl;background:var(--bg);
 /* ─── Animations ──────────────────────────── */
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-@keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 @keyframes tickerScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes tipFadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes popIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+
+/* ─── Typography scale ───────────────────── */
+.tc-page-title{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.2px}
+.tc-section-title{font-size:15px;font-weight:700;color:var(--text)}
+.tc-sub-title{font-size:12.5px;font-weight:600;color:var(--sub);text-transform:none}
+.tc-body{font-size:14px;color:var(--text2)}
+.tc-meta{font-size:11.5px;color:var(--sub)}
 
 /* ─── Form elements ───────────────────────── */
-input,textarea,select{font-family:inherit;transition:border-color .2s,box-shadow .2s}
-input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)!important;box-shadow:0 0 0 3px var(--accent-light)!important}
+input,textarea,select{font-family:inherit;transition:border-color .15s,box-shadow .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary)!important;box-shadow:0 0 0 3px var(--primary-light)!important}
+::placeholder{color:var(--sub);opacity:.85}
 
 /* ─── Card elevation system ───────────────── */
-.card-sm{background:var(--card);border-radius:10px;box-shadow:0 1px 3px var(--shadow)}
-.card-md{background:var(--card);border-radius:12px;box-shadow:0 2px 8px var(--shadow)}
-.card-lg{background:var(--card);border-radius:16px;box-shadow:0 4px 16px var(--shadow2)}
+.card-sm{background:var(--card);border-radius:var(--radius-sm);box-shadow:0 1px 3px var(--shadow);border:1px solid var(--border)}
+.card-md{background:var(--card);border-radius:var(--radius-md);box-shadow:0 2px 10px var(--shadow);border:1px solid var(--border)}
+.card-lg{background:var(--card);border-radius:var(--radius-lg);box-shadow:0 6px 24px var(--shadow2)}
+
+/* ─── Buttons — unified system ────────────── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  font-family:inherit;font-weight:600;font-size:13.5px;cursor:pointer;
+  border-radius:10px;border:1px solid transparent;padding:9px 16px;
+  transition:opacity .15s,transform .08s,background .15s,border-color .15s;
+  white-space:nowrap;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-secondary{background:var(--card2);color:var(--text);border-color:var(--border2)}
+.btn-secondary:hover{background:var(--border)}
+.btn-ghost{background:transparent;color:var(--text2);border-color:transparent}
+.btn-ghost:hover{background:var(--card2)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-icon{width:36px;height:36px;padding:0;border-radius:10px}
+.btn-sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
+
+/* Header icon buttons (glass header — see .header-glass) */
+.hdr-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  background:rgba(127,140,165,.14);color:var(--text);border:none;border-radius:9px;
+  padding:8px 11px;cursor:pointer;font-size:14px;transition:background .15s,transform .08s;
+  flex-shrink:0;position:relative;
+}
+.hdr-btn:hover{background:rgba(127,140,165,.26)}
+.hdr-btn:active{transform:scale(.94)}
+.hdr-btn.on{background:var(--primary);color:#fff}
+
+/* Header tooltip variant — bubble drops downward from a sticky top bar */
+.tt-hdr::after{bottom:auto;top:calc(100% + 9px);transform:translateX(-50%) translateY(-4px)}
+.tt-hdr::before{bottom:auto;top:calc(100% + 4px);border-top-color:transparent;border-bottom-color:var(--text);transform:translateX(-50%) translateY(-4px)}
+.tt-hdr:hover::after,.tt-hdr:hover::before{transform:translateX(-50%) translateY(0)}
+
+/* Dropdown menu (e.g. admin tools) */
+.menu-wrap{position:relative}
+.menu-panel{
+  position:absolute;top:calc(100% + 10px);left:0;z-index:250;min-width:230px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
+  box-shadow:0 16px 40px var(--shadow2);padding:6px;animation:popIn .16s ease-out;
+  max-height:70vh;overflow-y:auto;
+}
+.menu-item{
+  display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border-radius:9px;
+  border:none;background:transparent;color:var(--text);font-family:inherit;font-size:13px;font-weight:600;
+  cursor:pointer;transition:background .15s ease;text-align:right;
+}
+.menu-item:hover{background:var(--card2)}
+.menu-item .ic{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.menu-item.danger{color:var(--red)}
+.menu-item.danger:hover{background:var(--red-bg)}
+.menu-divider{height:1px;background:var(--border);margin:5px 4px}
+
+/* ─── Badges ───────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
 
 /* ─── Table improvements ──────────────────── */
 table{border-collapse:separate;border-spacing:0}
+.tc-table{width:100%;font-size:13.5px}
+.tc-table thead th{
+  position:sticky;top:0;background:var(--card2);color:var(--sub);
+  font-weight:700;font-size:11.5px;text-align:right;padding:11px 12px;
+  border-bottom:2px solid var(--border);white-space:nowrap;z-index:1;
+}
+.tc-table tbody td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.tc-table tbody tr{transition:background .1s}
+.tc-table tbody tr:hover{background:var(--card2)}
 
-/* ─── Button base ─────────────────────────── */
-button{transition:opacity .15s,transform .1s}
-button:active{transform:scale(.97)}
+/* ─── Layout helpers ───────────────────────── */
+.tc-container{max-width:1160px;margin:0 auto;width:100%}
+.tc-breadcrumb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;color:var(--sub)}
+.tc-breadcrumb .seg{cursor:pointer;color:var(--sub);transition:color .12s}
+.tc-breadcrumb .seg:hover{color:var(--primary)}
+.tc-breadcrumb .seg.current{color:var(--text);font-weight:700;cursor:default}
+.tc-breadcrumb .sep{color:var(--border2)}
+
+/* ─── Hero search (Home) ──────────────────── */
+.hero-search-wrap{position:relative;max-width:640px;margin:0 auto}
+.hero-search{
+  width:100%;padding:16px 52px 16px 20px;border-radius:16px;
+  border:2px solid var(--border);background:var(--card);
+  font-size:16px;color:var(--text);box-shadow:0 4px 20px var(--shadow);
+}
+.hero-search:focus{border-color:var(--cyan);box-shadow:0 4px 24px var(--shadow2),0 0 0 4px var(--cyan-glow)!important}
+
+/* ─── Brand cards / Bento tiles ─────────────── */
+.brand-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:18px 16px;cursor:pointer;transition:transform .14s,box-shadow .14s,border-color .14s;
+  display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;
+}
+.brand-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px var(--shadow);border-color:var(--border2)}
+
+/* Glass surface — used for hero, login, header overlays */
+.glass{
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+}
+
+/* Bento tile — 3D tilt + cursor-tracked cyan glow (transform/--mx/--my set via JS) */
+.bento-tile{
+  position:relative;border-radius:var(--radius-xl);overflow:hidden;transform-style:preserve-3d;
+  transition:transform .18s ease,box-shadow .3s ease;will-change:transform;cursor:pointer;
+}
+.bento-tile .glow-layer{
+  position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity .25s ease;pointer-events:none;z-index:1;
+  background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%), var(--cyan-glow), transparent 60%);
+}
+.bento-tile:hover .glow-layer{opacity:1}
+.bento-tile:hover{box-shadow:0 20px 50px var(--shadow2)}
+
+/* Scroll-reveal (Fade & Slide) */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+.reveal.show{opacity:1;transform:none}
+
+/* Cool-air particle canvas — decorative, sits behind hero content */
+.air-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.65;z-index:0}
+
+/* ─── Login screen — adaptive background (light pastel aurora / dark tech navy) ─── */
+.login-bg{background:linear-gradient(160deg,#dfe9ff,#f4f0ff)}
+.dark .login-bg{background:linear-gradient(160deg,#060c1c,#0d1b33,#060c1c)}
+.login-blob-a{background:#a9c8ff}.dark .login-blob-a{background:var(--cyan)}
+.login-blob-b{background:#ffc6e8}.dark .login-blob-b{background:#3b6fd6}
+.login-blob-c{background:#bdf7dd}.dark .login-blob-c{background:#7c5cff}
+
+/* ─── Management toolbar — same design language as the home screen ─── */
+.toolbar-panel{
+  background:var(--glass-bg);border:1px solid var(--glass-border);
+  backdrop-filter:blur(14px) saturate(160%);-webkit-backdrop-filter:blur(14px) saturate(160%);
+  border-radius:var(--radius-lg);padding:10px;box-shadow:0 4px 20px var(--shadow);
+}
+.tool-group{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.tool-sep{width:1px;align-self:stretch;background:var(--border2);margin:2px 6px;flex-shrink:0}
+.tool-group-label{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.4px;width:100%;margin-bottom:2px}
+
+.tool-btn{
+  position:relative;display:inline-flex;align-items:center;gap:7px;
+  padding:8px 12px;border-radius:12px;border:1px solid transparent;background:transparent;
+  color:var(--text2);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:background .18s ease,color .18s ease,transform .12s ease,box-shadow .18s ease,border-color .18s ease;
+  white-space:nowrap;
+}
+.tool-btn .ic{font-size:15px;line-height:1;transition:transform .18s ease;display:inline-block}
+.tool-btn:hover{background:var(--card2);color:var(--text)}
+.tool-btn:hover .ic{transform:scale(1.15)}
+.tool-btn:active{transform:scale(.94)}
+.tool-btn.active{background:var(--primary);color:#fff;box-shadow:0 4px 14px var(--cyan-glow);border-color:transparent}
+.tool-btn.active:hover{background:var(--primary-dark);color:#fff}
+.tool-btn.warn{color:var(--orange)}
+.tool-btn.warn:hover{background:var(--orange-bg)}
+.tool-btn.danger{color:var(--red)}
+.tool-btn.danger:hover{background:var(--red-bg)}
+.tool-btn:disabled{opacity:.4;cursor:default}
+.tool-btn:disabled:hover{background:transparent;color:var(--text2)}
+
+/* Icon-only round button (row-level actions) */
+.icon-btn{
+  display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;
+  border:1px solid transparent;background:transparent;color:var(--sub);cursor:pointer;font-size:14px;
+  transition:background .15s ease,color .15s ease,transform .12s ease;
+}
+.icon-btn:hover{background:var(--card2);color:var(--text);transform:scale(1.08)}
+.icon-btn:active{transform:scale(.92)}
+.icon-btn.active{background:var(--orange-bg);color:var(--orange)}
+
+/* Tooltip — lightweight, CSS-only, fast */
+.tt{position:relative}
+.tt::after{
+  content:attr(data-tt);position:absolute;bottom:calc(100% + 9px);left:50%;
+  transform:translateX(-50%) translateY(4px);
+  background:var(--text);color:var(--card);font-size:11px;font-weight:600;padding:6px 11px;border-radius:8px;
+  white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s ease,transform .15s ease;z-index:60;
+  box-shadow:0 6px 16px var(--shadow2);
+}
+.tt::before{
+  content:'';position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--text);opacity:0;transition:opacity .15s ease;pointer-events:none;z-index:60;
+}
+.tt:hover::after,.tt:hover::before{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Hidden-from-customers badge */
+.badge-hidden{
+  display:inline-flex;align-items:center;gap:4px;background:var(--orange-bg);color:var(--orange);
+  border:1px solid var(--orange);border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700;
+}
+
+@keyframes tapPop{0%{transform:scale(1)}45%{transform:scale(.9)}100%{transform:scale(1)}}
+
+@media(max-width:640px){
+  .tool-btn .lbl{display:none}
+  .tool-btn{padding:9px;border-radius:11px}
+  .tool-group-label{font-size:9px}
+}
+
+/* Empty / loading states ───────────────── */
+.empty-state{text-align:center;padding:48px 20px;color:var(--sub)}
+.empty-state .icon{font-size:38px;margin-bottom:10px;opacity:.7}
 
 /* ─── Mobile ──────────────────────────────── */
-@media(max-width:600px){
+@media(max-width:640px){
   .hide-mobile{display:none!important}
+  .tc-page-title{font-size:19px}
+  .hero-search{font-size:15px;padding:14px 46px 14px 16px}
 }
 </style>
 </head>
@@ -116,6 +365,9 @@ button:active{transform:scale(.97)}
     appId:"1:622794251696:web:aafcaf67b729d653de4a75"
   });
   window._db = firebase.firestore();
+  // Staff sign-in lives in memory only: closing/reloading the tab signs out, so a
+  // forgotten session on a shared computer can never give write access to the next person.
+  if (firebase.auth) { window._auth = firebase.auth(); window._auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(){}); }
 </script>
 
 <script>
@@ -127,14 +379,15 @@ button:active{transform:scale(.97)}
   });
 </script>
 
-<script type="text/babel" data-presets="my-react-env" src="js/constants.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/firebase.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/helpers.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/components.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/modals.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/ModelView.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/compare.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/makat_review.js"></script>
-<script type="text/babel" data-presets="my-react-env" src="js/App.js"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/constants.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/security.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/firebase.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/helpers.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/components.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/modals.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/ModelView.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/compare.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/makat_review.js?v=1791654145"></script>
+<script type="text/babel" data-presets="my-react-env" src="js/App.js?v=1791654145"></script>
 </body>
 </html>

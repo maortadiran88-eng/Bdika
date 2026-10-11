@@ -29,7 +29,7 @@ function MakatReviewPanel({data, onClose, approvals}){
     return {total, ok, fix, pending: total-ok-fix, pct};
   };
 
-  const barColor = pct => pct>=80?'#4caf50':pct>=40?'#ff9800':'#e53935';
+  const barColor = pct => pct>=80?'var(--green)':pct>=40?'var(--orange)':'var(--red)';
 
   // ── grand total ───────────────────────────────────────────
   let grandTotal=0, grandOk=0, grandFix=0;
@@ -62,8 +62,8 @@ function MakatReviewPanel({data, onClose, approvals}){
           <div style={{height:'100%',width:grandPct+'%',background:barColor(grandPct),transition:'width .4s',borderRadius:8}}/>
         </div>
         <div style={{display:'flex',gap:20,fontSize:12}}>
-          <span style={{color:'#4caf50',fontWeight:'bold'}}>✓ אושרו: {grandOk}</span>
-          <span style={{color:'#e53935',fontWeight:'bold'}}>✗ לתיקון: {grandFix}</span>
+          <span style={{color:'var(--green)',fontWeight:'bold'}}>✓ אושרו: {grandOk}</span>
+          <span style={{color:'var(--red)',fontWeight:'bold'}}>✗ לתיקון: {grandFix}</span>
           <span style={{color:'var(--sub)'}}>⏳ ממתינים: {grandTotal-grandOk-grandFix}</span>
         </div>
       </div>
@@ -142,15 +142,15 @@ function MakatReviewPanel({data, onClose, approvals}){
 
                         {/* Counts */}
                         <div style={{fontSize:11,textAlign:'center',flexShrink:0,minWidth:50}}>
-                          <span style={{color:'#4caf50',fontWeight:'bold'}}>{ms.ok}✓</span>
-                          {ms.fix>0&&<span style={{color:'#e53935',fontWeight:'bold',marginRight:4}}>{ms.fix}✗</span>}
+                          <span style={{color:'var(--green)',fontWeight:'bold'}}>{ms.ok}✓</span>
+                          {ms.fix>0&&<span style={{color:'var(--red)',fontWeight:'bold',marginRight:4}}>{ms.fix}✗</span>}
                           {ms.pending>0&&<span style={{color:'var(--sub)',marginRight:4}}>{ms.pending}⏳</span>}
                         </div>
 
                         {/* Status badge */}
                         <div style={{
                           width:32,height:32,borderRadius:'50%',flexShrink:0,
-                          background:ms.pct===100?'#4caf50':ms.pct===0?'var(--border)':bc+'33',
+                          background:ms.pct===100?'var(--green)':ms.pct===0?'var(--border)':bc+'33',
                           display:'flex',alignItems:'center',justifyContent:'center',
                           fontSize:16
                         }}>

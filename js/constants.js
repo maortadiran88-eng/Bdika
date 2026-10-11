@@ -39,8 +39,6 @@ const DEFAULT_USERS = [
 
 const INIT = () => ({
   users: DEFAULT_USERS,
-  // Legacy fields kept for backward compat
-  pass:'admin1234', editorPass:'editor1234', viewerPass:'tadir123',
   waDefaults:['nameHe','tadPn'],
   welcomeTitle:'ברוך הבא לקטלוג חלקי חילוף למערכות VRF',
   welcomeSub:'תחת המותג תדיראן',

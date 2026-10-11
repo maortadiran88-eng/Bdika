@@ -31,19 +31,172 @@ function partMatches(q,p,cols){
   return qParts.every(qp=>fuzzyMatch(qp,allText));
 }
 
-const bB  = bg=>({background:bg,border:'none',color:'#fff',padding:'7px 11px',borderRadius:7,cursor:'pointer',fontSize:12,fontWeight:'bold',whiteSpace:'nowrap',flexShrink:0});
-const sB  = bg=>({background:bg,border:'none',color:'#fff',padding:'4px 10px',borderRadius:5,cursor:'pointer',fontSize:11,whiteSpace:'nowrap'});
-const BPr = bg=>({background:bg,border:'none',color:'#fff',padding:'10px 0',borderRadius:8,cursor:'pointer',fontWeight:'bold',fontSize:14});
-const BST = {background:'var(--border)',border:'none',color:'var(--text)',padding:'10px 0',borderRadius:8,cursor:'pointer',fontSize:14};
-const INS = {width:'100%',padding:'10px 14px',borderRadius:8,border:'1px solid var(--border)',fontSize:14,boxSizing:'border-box',textAlign:'right',color:'var(--inp)',outline:'none',display:'block',background:'var(--ibg)'};
+// Kept as functions/objects with identical shapes so every existing call site
+// (bB('#e53935'), style={{...BPr('#1565c0')}}, etc.) keeps working unchanged —
+// only the visual values were modernized.
+const bB  = bg=>({background:bg,border:'none',color:'#fff',padding:'8px 12px',borderRadius:9,cursor:'pointer',fontSize:13,fontWeight:600,whiteSpace:'nowrap',flexShrink:0,transition:'background .15s,transform .08s'});
+const sB  = bg=>({background:bg,border:'none',color:'#fff',padding:'5px 11px',borderRadius:7,cursor:'pointer',fontSize:11.5,fontWeight:600,whiteSpace:'nowrap'});
+const BPr = bg=>({background:bg,border:'none',color:'#fff',padding:'11px 0',borderRadius:10,cursor:'pointer',fontWeight:700,fontSize:14,transition:'opacity .15s'});
+const BST = {background:'var(--card2)',border:'1px solid var(--border2)',color:'var(--text)',padding:'11px 0',borderRadius:10,cursor:'pointer',fontSize:14,fontWeight:600};
+const INS = {width:'100%',padding:'10px 14px',borderRadius:9,border:'1px solid var(--border)',fontSize:14,boxSizing:'border-box',textAlign:'right',color:'var(--inp)',outline:'none',display:'block',background:'var(--ibg)'};
 
 function Modal({children,onClose,wide,title}){
   return(
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={onClose}>
-      <div style={{background:'var(--card)',borderRadius:14,padding:24,width:'100%',maxWidth:wide?700:390,maxHeight:'92vh',overflowY:'auto',animation:'fadeIn .15s',color:'var(--text)'}} dir="rtl" onClick={e=>e.stopPropagation()}>
-        {title&&<div style={{fontWeight:'bold',fontSize:17,marginBottom:16,borderBottom:'1px solid var(--border)',paddingBottom:12}}>{title}</div>}
+    <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,.6)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',padding:16,backdropFilter:'blur(1px)'}} onClick={onClose}>
+      <div style={{background:'var(--card)',borderRadius:16,padding:24,width:'100%',maxWidth:wide?720:390,maxHeight:'92vh',overflowY:'auto',animation:'popIn .16s ease-out',color:'var(--text)',boxShadow:'0 20px 60px rgba(0,0,0,.35)'}} dir="rtl" onClick={e=>e.stopPropagation()}>
+        {title&&<div style={{fontWeight:800,fontSize:17,marginBottom:16,borderBottom:'1px solid var(--border)',paddingBottom:14}}>{title}</div>}
         {children}
       </div>
+    </div>
+  );
+}
+
+// ── Search results dropdown — anchored right below whichever search box is
+// showing it (rendered inside a position:relative wrapper around the input),
+// so it never covers what the user is typing. ──
+function SearchResultsPanel({results,query,onClose,onSelect}){
+  return(
+    <div style={{position:'absolute',top:'calc(100% + 8px)',right:0,left:0,zIndex:300,background:'var(--card)',borderRadius:12,boxShadow:'0 10px 30px var(--shadow2)',border:'1px solid var(--border)',maxHeight:'55vh',overflowY:'auto',animation:'fadeIn .12s'}}>
+      <div style={{padding:'8px 14px',borderBottom:'1px solid var(--border)',color:'var(--sub)',fontSize:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span>{results.length} תוצאות עבור: <strong style={{color:'var(--text)'}}>{query}</strong></span>
+        <button onClick={onClose} style={{background:'var(--red)',border:'none',borderRadius:6,color:'#fff',padding:'3px 10px',cursor:'pointer',fontSize:12}}>✕ סגור</button>
+      </div>
+      {!results.length&&(
+        <div style={{padding:28,textAlign:'center'}}>
+          <div style={{fontSize:32,marginBottom:8}}>🔍</div>
+          <div style={{color:'var(--sub)',fontSize:14,fontWeight:700}}>לא נמצאו תוצאות עבור "{query}"</div>
+          <div style={{color:'var(--sub)',fontSize:12,marginTop:6}}>נסה לחפש לפי שם דגם, מק"ט יצרן, מק"ט תדיראן או שם חלק</div>
+        </div>
+      )}
+      {results.map((r,i)=>(
+        <div key={i} onClick={()=>onSelect(r)}
+          style={{padding:'10px 14px',cursor:'pointer',borderBottom:'1px solid var(--border)',background:'var(--card)'}}
+          onMouseEnter={e=>e.currentTarget.style.background='var(--row2)'}
+          onMouseLeave={e=>e.currentTarget.style.background='var(--card)'}>
+          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:4}}>
+            <span style={{background:r.b.color,color:'#fff',padding:'2px 8px',borderRadius:4,fontSize:11,fontWeight:700}}>{r.b.name}</span>
+            <span style={{fontWeight:700,color:'var(--text)',fontSize:14}}>{r.m.name}</span>
+            {r.ms&&<span style={{background:'var(--primary-light)',color:'var(--primary)',padding:'1px 7px',borderRadius:4,fontSize:11,fontWeight:700}}>≡ {r.ms}</span>}
+            {r.m.synonyms?.filter(s=>s!==r.ms).map((s,si)=>(
+              <span key={si} style={{background:'var(--primary-light)',color:'var(--primary)',padding:'1px 6px',borderRadius:4,fontSize:10}}>{s}</span>
+            ))}
+            <span style={{color:'var(--sub)',fontSize:11}}>{r.c.name}</span>
+            {r.ph.length>0&&<span style={{color:'var(--orange)',fontSize:11,background:'var(--orange-bg)',padding:'1px 6px',borderRadius:4}}>✦ {r.ph.length} חלקים</span>}
+          </div>
+          {r.ph.slice(0,3).map(p=>{
+            const he=(p.values.nameHe||'').trim(),tadPn=(p.values.tadPn||'').trim(),mfgPn=(p.values.mfgPn||'').trim();
+            return(
+              <div key={p.id} style={{fontSize:11,color:'var(--sub)',paddingRight:8,marginBottom:2,display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                {p.discontinued&&<span style={{background:'var(--red)',color:'#fff',borderRadius:4,padding:'1px 6px',fontSize:10,fontWeight:700}}>⛔ הופסק</span>}
+                {he&&<span style={{color:'var(--text)',fontWeight:500}}>{he}</span>}
+                {tadPn&&<span>מק"ט תדיראן: <strong style={{color:'var(--primary)'}}>{tadPn}</strong></span>}
+                {mfgPn&&<span>מק"ט יצרן: <strong>{mfgPn}</strong></span>}
+              </div>
+            );
+          })}
+          {r.ph.length>3&&<div style={{fontSize:10,color:'var(--sub)',paddingRight:8}}>ועוד {r.ph.length-3} חלקים...</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── TiltCard — bento tile with 3D tilt + cursor-tracked cyan glow on hover ──
+// Purely presentational wrapper: forwards onClick untouched, adds no state to
+// the app, so it never affects data or navigation logic.
+function TiltCard({className,style,onClick,children}){
+  const ref = useRef(null);
+  const onMove = e => {
+    const el = ref.current; if(!el) return;
+    const r = el.getBoundingClientRect();
+    const x = e.clientX-r.left, y = e.clientY-r.top;
+    const rx = ((y/r.height)-.5) * -7;
+    const ry = ((x/r.width)-.5) * 7;
+    el.style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-4px)`;
+    el.style.setProperty('--mx', x+'px');
+    el.style.setProperty('--my', y+'px');
+  };
+  const onLeave = () => { if(ref.current) ref.current.style.transform = ''; };
+  return (
+    <div ref={ref} className={'bento-tile '+(className||'')} style={style} onClick={onClick} onMouseMove={onMove} onMouseLeave={onLeave}>
+      <div className="glow-layer"></div>
+      {children}
+    </div>
+  );
+}
+
+// ── Reveal — wraps a section so it fades/slides in once scrolled into view.
+// Wrapper only; never alters what's rendered inside it. ──
+function Reveal({children,className,style}){
+  const ref = useRef(null);
+  const [shown,setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if(!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if(entry.isIntersecting){ setShown(true); io.unobserve(el); }
+    }, {threshold:.12});
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return <div ref={ref} className={'reveal '+(shown?'show ':'')+(className||'')} style={style}>{children}</div>;
+}
+
+// ── AirParticles — decorative cool-air particle canvas for the hero. Reads
+// nothing from app state and writes nothing back; safe to mount/unmount freely. ──
+function AirParticles(){
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current; if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf, W, H, mouseX=0, mouseY=0;
+    const resize = () => { W=canvas.width=canvas.offsetWidth; H=canvas.height=canvas.offsetHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+    const move = e => { const r=canvas.getBoundingClientRect(); mouseX=e.clientX-r.left; mouseY=e.clientY-r.top; };
+    const parent = canvas.parentElement;
+    if(parent) parent.addEventListener('mousemove', move);
+    const particles = Array.from({length:34}, () => ({
+      x:Math.random()*W, y:Math.random()*H+H*.2,
+      r:Math.random()*2+1, vy:-(Math.random()*.4+.2), vx:(Math.random()-.5)*.25,
+      a:Math.random()*.4+.12
+    }));
+    const tick = () => {
+      ctx.clearRect(0,0,W,H);
+      const dark = document.documentElement.classList.contains('dark');
+      const color = dark ? '49,215,232' : '10,42,99';
+      particles.forEach(p => {
+        const dx=(mouseX-p.x)*.0005, dy=(mouseY-p.y)*.0005;
+        p.x+=p.vx+dx; p.y+=p.vy+dy;
+        if(p.y<-10){ p.y=H+10; p.x=Math.random()*W; }
+        if(p.x<-10) p.x=W+10; if(p.x>W+10) p.x=-10;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle = `rgba(${color},${p.a})`; ctx.fill();
+      });
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+      if(parent) parent.removeEventListener('mousemove', move);
+    };
+  }, []);
+  return <canvas ref={ref} className="air-canvas" aria-hidden="true"/>;
+}
+
+function Breadcrumb({items,onHome}){
+  // items: [{label, onClick}] — last item renders as the current (non-clickable) page
+  return(
+    <div className="tc-breadcrumb" dir="rtl">
+      <span className="seg" onClick={onHome}>🏠 קטלוג חלקי חילוף</span>
+      {items.map((it,i)=>(
+        <React.Fragment key={i}>
+          <span className="sep">›</span>
+          {i===items.length-1||!it.onClick
+            ?<span className="seg current">{it.label}</span>
+            :<span className="seg" onClick={it.onClick}>{it.label}</span>}
+        </React.Fragment>
+      ))}
     </div>
   );
 }
